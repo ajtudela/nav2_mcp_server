@@ -1,0 +1,11 @@
+{
+    "name": "nav2_mcp_server",
+    "type": "stdio",
+    "command": "docker",
+    "args": [
+        "run",
+        "-i",
+        "--rm",
+        "nav2_mcp_server"
+    ]
+}
