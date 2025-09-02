@@ -1,5 +1,1 @@
 fastmcp>=2.2.7
-rclpy
-geometry-msgs
-nav-msgs
-nav2-msgs

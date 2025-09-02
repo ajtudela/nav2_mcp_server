@@ -1,11 +1,16 @@
 {
-    "name": "nav2_mcp_server",
-    "type": "stdio",
-    "command": "docker",
-    "args": [
-        "run",
-        "-i",
-        "--rm",
-        "nav2_mcp_server"
-    ]
+    "servers": {
+        "nav2_mcp_server": {
+            "type": "stdio",
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--rm",
+                "-e",
+                "ROS_DOMAIN_ID=YOUR_ROS_DOMAIN_ID",
+                "nav2_mcp_server"
+            ]
+        }
+    }
 }
