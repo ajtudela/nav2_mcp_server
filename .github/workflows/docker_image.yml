@@ -25,6 +25,15 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5.5.1
+        with:
+          images: ${{ github.repository_owner }}/nav2_mcp_server
+          tags: |
+            type=ref, event=branch
+            type=sha
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.3.0
         id: nav2_mcp_server-builder
@@ -51,9 +60,8 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
 
