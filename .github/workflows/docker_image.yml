@@ -50,7 +50,7 @@ jobs:
           builder: ${{ steps.nav2_mcp_server-builder.outputs.name }}
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
