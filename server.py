@@ -5,6 +5,7 @@ This module exposes tools and resources for navigation via FastMCP.
 
 import anyio
 import asyncio
+from typing import Annotated
 from fastmcp import FastMCP, Context
 import rclpy
 from geometry_msgs.msg import PoseStamped
@@ -90,8 +91,8 @@ def _send_navigation_goal_sync(x: float, y: float, ctx: Context) -> str:
 
 @mcp.tool(
     name='send_navigation_goal',
-    description='Send a NavigateToPose goal to Nav2 at the given x, y coordinates '
-                'in the map frame.',
+    description='Send a NavigateToPose goal to Nav2 at the given x, y '
+                'coordinates in the map frame.',
     annotations={
         'title': 'Navigate To',
         'readOnlyHint': True,
@@ -105,7 +106,11 @@ def _send_navigation_goal_sync(x: float, y: float, ctx: Context) -> str:
         ],
     },
 )
-async def send_navigation_goal(x: float, y: float, ctx: Context) -> str:
+async def send_navigation_goal(
+    x: Annotated[float, 'X coordinate of the target pose in the map frame'],
+    y: Annotated[float, 'Y coordinate of the target pose in the map frame)'],
+    ctx: Annotated[Context, 'MCP context used for logging and progress msgs'],
+) -> str:
     """Send a NavigateToPose goal to Nav2.
 
     This tool sends a single navigation goal expressed in the `map` frame using
