@@ -7,12 +7,15 @@ waypoint following, path planning, costmap operations, and lifecycle management.
 
 import anyio
 import asyncio
+import json
+import math
 from typing import Annotated, Optional
 from fastmcp import FastMCP, Context
 import rclpy
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.duration import Duration
+from tf2_ros import Buffer, TransformListener
 
 
 # Create MCP application
@@ -21,6 +24,10 @@ mcp = FastMCP('nav2-mcp-server')
 # Global navigator instance for reuse
 _navigator: Optional[BasicNavigator] = None
 
+# Global TF buffer and listener for reuse
+_tf_buffer: Optional[Buffer] = None
+_tf_listener: Optional[TransformListener] = None
+
 
 def _get_navigator() -> BasicNavigator:
     """Get or create the global navigator instance."""
@@ -28,6 +35,16 @@ def _get_navigator() -> BasicNavigator:
     if _navigator is None:
         _navigator = BasicNavigator()
     return _navigator
+
+
+def _get_tf_buffer() -> Buffer:
+    """Get or create the global TF buffer and listener."""
+    global _tf_buffer, _tf_listener, _navigator
+    if _tf_buffer is None:
+        navigator = _get_navigator()
+        _tf_buffer = Buffer()
+        _tf_listener = TransformListener(_tf_buffer, navigator)
+    return _tf_buffer
 
 
 # -------------------------------
@@ -185,7 +202,6 @@ def _follow_waypoints_sync(waypoints_str: str, ctx: Optional[Context] = None) ->
     str
         Status message of waypoint following result.
     """
-    import json
     navigator = _get_navigator()
 
     if ctx:
@@ -479,13 +495,6 @@ async def backup_robot(
     -------
     str
         Status message indicating the result of the backup operation.
-
-    Examples
-    --------
-    >>> await backup_robot(1.0, 0.2)
-    'Successfully backed up 1.00 meters'
-    >>> await backup_robot(0.5)  # Uses default speed
-    'Successfully backed up 0.50 meters'
     """
     return await anyio.to_thread.run_sync(_backup_robot_sync, distance, speed, ctx)
 
@@ -605,51 +614,44 @@ def _get_robot_pose_sync(ctx: Optional[Context] = None) -> str:
     str
         JSON string with current robot pose information.
     """
-    import json
-    navigator = _get_navigator()
-
     try:
         if ctx:
             anyio.from_thread.run(ctx.info, 'Getting current robot pose...')
 
-        # Wait for Nav2 to be active
-        navigator.waitUntilNav2Active()
+        # Get global TF buffer
+        tf_buffer = _get_tf_buffer()
 
-        # Get current pose - this might need to be implemented differently
-        # depending on the BasicNavigator version
-        current_pose = getattr(navigator, 'current_pose', None)
+        try:
+            # Get transform from base_link to map
+            transform = tf_buffer.lookup_transform(
+                'map',  # target frame
+                'base_link',  # source frame
+                rclpy.time.Time(),  # get the latest available transform
+                timeout=rclpy.duration.Duration(seconds=2.0)
+            )
 
-        if current_pose is None:
-            # Try alternative method to get pose
-            if hasattr(navigator, 'initial_pose'):
-                current_pose = navigator.initial_pose
-                pose_info = {
-                    'x': current_pose.pose.position.x,
-                    'y': current_pose.pose.position.y,
-                    'z': current_pose.pose.position.z,
-                    'orientation_w': current_pose.pose.orientation.w,
-                    'orientation_x': current_pose.pose.orientation.x,
-                    'orientation_y': current_pose.pose.orientation.y,
-                    'orientation_z': current_pose.pose.orientation.z,
-                    'frame_id': current_pose.header.frame_id,
-                    'status': 'estimated_from_initial_pose'
-                }
-            else:
-                pose_info = {
-                    'status': 'pose_unavailable',
-                    'message': 'Current robot pose not available'
-                }
-        else:
+            # Extract position and orientation from transform
+            quat_w = transform.transform.rotation.w
+            quat_x = transform.transform.rotation.x
+            quat_y = transform.transform.rotation.y
+            quat_z = transform.transform.rotation.z
+
+            # Calculate yaw from quaternion (rotation around z-axis)
+            yaw = math.atan2(2.0 * (quat_w * quat_z + quat_x * quat_y),
+                             1.0 - 2.0 * (quat_y * quat_y + quat_z * quat_z))
+
             pose_info = {
-                'x': current_pose.pose.position.x,
-                'y': current_pose.pose.position.y,
-                'z': current_pose.pose.position.z,
-                'orientation_w': current_pose.pose.orientation.w,
-                'orientation_x': current_pose.pose.orientation.x,
-                'orientation_y': current_pose.pose.orientation.y,
-                'orientation_z': current_pose.pose.orientation.z,
-                'frame_id': current_pose.header.frame_id,
-                'status': 'current_pose'
+                'x': transform.transform.translation.x,
+                'y': transform.transform.translation.y,
+                'yaw': yaw,
+            }
+
+        except Exception as tf_error:
+            # If transform is not available, return error information
+            pose_info = {
+                'status': 'transform_unavailable',
+                'message': f'Could not get transform from base_link to map: {str(tf_error)}',
+                'error_type': type(tf_error).__name__
             }
 
         result = json.dumps(pose_info, indent=2)
@@ -701,11 +703,6 @@ async def get_robot_pose(
         - orientation_w, orientation_x, orientation_y, orientation_z: Quaternion
         - frame_id: Reference frame (typically 'map')
         - status: Availability status of pose data
-
-    Examples
-    --------
-    >>> await get_robot_pose()
-    '{"x": 1.23, "y": 4.56, "z": 0.0, "orientation_w": 0.707, ...}'
     """
     return await anyio.to_thread.run_sync(_get_robot_pose_sync, ctx)
 
@@ -723,7 +720,6 @@ def _get_navigation_status_sync(ctx: Optional[Context] = None) -> str:
     str
         JSON string with navigation status information.
     """
-    import json
     navigator = _get_navigator()
 
     try:
@@ -821,11 +817,6 @@ async def get_navigation_status(
         - error_message: Human-readable error message
         - feedback: Current navigation feedback (if available)
         - timestamp: Current system timestamp
-
-    Examples
-    --------
-    >>> await get_navigation_status()
-    '{"nav2_active": true, "task_complete": false, "feedback": {...}}'
     """
     return await anyio.to_thread.run_sync(_get_navigation_status_sync, ctx)
 
@@ -900,11 +891,6 @@ async def cancel_navigation(
     -------
     str
         Status message indicating the result of the cancellation request.
-
-    Examples
-    --------
-    >>> await cancel_navigation()
-    'Navigation task cancellation requested'
     """
     return await anyio.to_thread.run_sync(_cancel_navigation_sync, ctx)
 
@@ -998,13 +984,6 @@ async def nav2_lifecycle(
     - Startup operation waits for all Nav2 nodes to become active
     - Shutdown operation cleanly deactivates all Nav2 lifecycle nodes
     - These operations may take several seconds to complete
-
-    Examples
-    --------
-    >>> await nav2_lifecycle('startup')
-    'Nav2 lifecycle startup completed successfully'
-    >>> await nav2_lifecycle('shutdown')
-    'Nav2 lifecycle shutdown completed successfully'
     """
     return await anyio.to_thread.run_sync(_lifecycle_operation_sync, operation, ctx)
 
@@ -1087,6 +1066,11 @@ async def main() -> None:
     finally:
         # Clean up ROS2
         logger.info('Shutting down ROS2...')
+        global _tf_listener, _tf_buffer
+        if _tf_listener:
+            _tf_listener = None
+        if _tf_buffer:
+            _tf_buffer = None
         if _navigator:
             _navigator.destroy_node()
         rclpy.shutdown()
