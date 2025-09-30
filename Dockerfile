@@ -4,8 +4,9 @@ FROM ghcr.io/alpine-ros/alpine-ros:jazzy-3.20-ros-core
 ENV ROS_DISTRO=jazzy
 ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ENV ROS_DOMAIN_ID=0
+ENV ROS_LOCALHOST_ONLY=1
 
-# Install necessary ROS2 packages (Nav2, geometry, etc.)
+# Install necessary ROS2 packages
 RUN apk add --no-cache \
     py3-pip \
     ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
@@ -20,13 +21,25 @@ RUN apk add --no-cache \
     ros-${ROS_DISTRO}-nav2-simple-commander \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
+# Install uv using pip
+RUN pip3 install --no-cache-dir --break-system-packages uv
+
+# Set working directory
 WORKDIR /app
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-COPY server.py .
+# Copy dependency files first for better Docker layer caching
+COPY pyproject.toml .
+COPY uv.lock* ./
 
-# MCP server startup command
+# Install dependencies using uv
+RUN uv sync --frozen --no-dev
+
+# Copy source code
+COPY src/ src/
+
+# Install the package in development mode
+RUN uv sync
+
+# MCP server startup command using uv
 ENTRYPOINT ["/ros_entrypoint.sh"]
-CMD ["python3", "server.py"]
+CMD ["uv", "run", "nav2_mcp_server"]
