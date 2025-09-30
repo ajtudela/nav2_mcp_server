@@ -9,13 +9,14 @@ import anyio
 import asyncio
 import json
 import math
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Dict, Any
 from fastmcp import FastMCP, Context
 import rclpy
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.duration import Duration
-from tf2_ros import Buffer, TransformListener
+from rclpy.node import Node
+from tf2_ros import Buffer, TransformException, TransformListener
 
 
 # Create MCP application
@@ -24,10 +25,6 @@ mcp = FastMCP('nav2-mcp-server')
 # Global navigator instance for reuse
 _navigator: Optional[BasicNavigator] = None
 
-# Global TF buffer and listener for reuse
-_tf_buffer: Optional[Buffer] = None
-_tf_listener: Optional[TransformListener] = None
-
 
 def _get_navigator() -> BasicNavigator:
     """Get or create the global navigator instance."""
@@ -35,16 +32,6 @@ def _get_navigator() -> BasicNavigator:
     if _navigator is None:
         _navigator = BasicNavigator()
     return _navigator
-
-
-def _get_tf_buffer() -> Buffer:
-    """Get or create the global TF buffer and listener."""
-    global _tf_buffer, _tf_listener, _navigator
-    if _tf_buffer is None:
-        navigator = _get_navigator()
-        _tf_buffer = Buffer()
-        _tf_listener = TransformListener(_tf_buffer, navigator)
-    return _tf_buffer
 
 
 # -------------------------------
@@ -618,17 +605,24 @@ def _get_robot_pose_sync(ctx: Optional[Context] = None) -> str:
         if ctx:
             anyio.from_thread.run(ctx.info, 'Getting current robot pose...')
 
-        # Get global TF buffer
-        tf_buffer = _get_tf_buffer()
+        # Get TF buffer with dedicated node
+        # Create dedicated node for TF operations
+        node = Node('nav2_mcp_server_tf_node')
+        tf_buffer = Buffer()
+        _ = TransformListener(tf_buffer, node)  # Keep listener alive
 
+        # Get transform from base_link to map
+        transform = None
+        pose_info: Dict[str, Any] = {}
         try:
-            # Get transform from base_link to map
-            transform = tf_buffer.lookup_transform(
-                'map',  # target frame
-                'base_link',  # source frame
-                rclpy.time.Time(),  # get the latest available transform
-                timeout=rclpy.duration.Duration(seconds=2.0)
-            )
+            while transform is None:
+                rclpy.spin_once(node, timeout_sec=0.5)
+                if tf_buffer.can_transform('map', 'base_link', rclpy.time.Time()):
+                    transform = tf_buffer.lookup_transform(
+                        'map',  # target frame
+                        'base_link',  # source frame
+                        rclpy.time.Time(),  # get the latest available transform
+                    )
 
             # Extract position and orientation from transform
             quat_w = transform.transform.rotation.w
@@ -646,12 +640,12 @@ def _get_robot_pose_sync(ctx: Optional[Context] = None) -> str:
                 'yaw': yaw,
             }
 
-        except Exception as tf_error:
+        except TransformException as ex:
             # If transform is not available, return error information
             pose_info = {
                 'status': 'transform_unavailable',
-                'message': f'Could not get transform from base_link to map: {str(tf_error)}',
-                'error_type': type(tf_error).__name__
+                'message': f'Could not get transform from base_link to map: {str(ex)}',
+                'error_type': type(ex).__name__
             }
 
         result = json.dumps(pose_info, indent=2)
@@ -1066,11 +1060,6 @@ async def main() -> None:
     finally:
         # Clean up ROS2
         logger.info('Shutting down ROS2...')
-        global _tf_listener, _tf_buffer
-        if _tf_listener:
-            _tf_listener = None
-        if _tf_buffer:
-            _tf_buffer = None
         if _navigator:
             _navigator.destroy_node()
         rclpy.shutdown()
