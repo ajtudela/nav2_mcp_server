@@ -27,12 +27,12 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 
 ## Features
 
-• **Navigation control**: Navigate to specific poses, follow waypoint sequences, and execute precise robot movements
-• **Real-time status**: Monitor navigation progress, robot pose, and system status with comprehensive feedback
-• **Costmap management**: Clear stale obstacle data and manage navigation costmaps for optimal path planning
-• **Lifecycle management**: Control Nav2 system startup and shutdown for complete system control
-• **ROS 2 integration**: Full compatibility with Nav2 navigation stack and ROS 2 ecosystem
-• **Async operations**: Non-blocking navigation commands with progress monitoring and cancellation support
+* **Navigation control**: Navigate to specific poses, follow waypoint sequences, and execute precise robot movements
+* **Real-time status**: Monitor navigation progress, robot pose, and system status with comprehensive feedback
+* **Costmap management**: Clear stale obstacle data and manage navigation costmaps for optimal path planning
+* **Lifecycle management**: Control Nav2 system startup and shutdown for complete system control
+* **ROS 2 integration**: Full compatibility with Nav2 navigation stack and ROS 2 ecosystem
+* **Async operations**: Non-blocking navigation commands with progress monitoring and cancellation support
 
 ## Installation
 
