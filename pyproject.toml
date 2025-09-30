@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nav2_mcp_server"
+version = "1.0.0"
+authors = [
+    {name = "Alberto J. Tudela Roldán", email = "ajtudela@gmail.com"},
+]
+description = "MCP server wrapping Nav2 action clients"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=2.12.3",
+    "rclpy",
+    "nav2-simple-commander",
+    "geometry-msgs",
+    "tf2-ros",
+    "anyio",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-asyncio",
+    "pytest-cov",
+    "black",
+    "flake8",
+    "mypy",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ajtudela/nav2_mcp_server"
+"Bug Reports" = "https://github.com/ajtudela/nav2_mcp_server/issues"
+"Source" = "https://github.com/ajtudela/nav2_mcp_server"
+
+[project.scripts]
+nav2_mcp_server = "nav2_mcp_server.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.black]
+line-length = 79
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.flake8]
+max-line-length = 79
+extend-ignore = ["E203", "W503"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
