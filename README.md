@@ -6,24 +6,24 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 
 ## Tools
 
-| Tool                  | Description                                                                       | Parameters                     |
-| --------------------- | --------------------------------------------------------------------------------- | ------------------------------ |
-| navigate_to_pose      | Navigate the robot to a specific pose (position and orientation) in the map frame | x: float, y: float, yaw: float |
-| follow_waypoints      | Navigate the robot through a sequence of waypoints in order                       | waypoints: str (JSON array)    |
-| spin_robot            | Rotate the robot in place by a specified angle                                    | angle: float                   |
-| backup_robot          | Move the robot backward by a specified distance                                   | distance: float, speed: float  |
-| clear_costmaps        | Clear robot navigation costmaps to remove stale obstacle data                     | costmap_type: str              |
-| get_robot_pose        | Get the current position and orientation of the robot                             | —                              |
-| get_navigation_status | Get the current status of the navigation system and any active tasks              | —                              |
-| cancel_navigation     | Cancel the currently active navigation task                                       | —                              |
-| nav2_lifecycle        | Control Nav2 lifecycle (startup or shutdown)                                      | action: str                    |
+| Tool                      | Description                                                                       | Parameters                       |
+| ------------------------- | --------------------------------------------------------------------------------- | -------------------------------- |
+| **navigate_to_pose**      | Navigate the robot to a specific pose (position and orientation) in the map frame | `x: float, y: float, yaw: float` |
+| **follow_waypoints**      | Navigate the robot through a sequence of waypoints in order                       | `waypoints: str (JSON array)`    |
+| **spin_robot**            | Rotate the robot in place by a specified angle                                    | `angle: float`                   |
+| **backup_robot**          | Move the robot backward by a specified distance                                   | `distance: float, speed: float`  |
+| **clear_costmaps**        | Clear robot navigation costmaps to remove stale obstacle data                     | `costmap_type: str`              |
+| **get_robot_pose**        | Get the current position and orientation of the robot                             | —                                |
+| **get_navigation_status** | Get the current status of the navigation system and any active tasks              | —                                |
+| **cancel_navigation**     | Cancel the currently active navigation task                                       | —                                |
+| **nav2_lifecycle**        | Control Nav2 lifecycle (startup or shutdown)                                      | `action: str`                    |
 
 ## Environment Variables
 
-| Variable           | Default | Description                                                  |
-| ------------------ | ------- | ------------------------------------------------------------ |
-| ROS_DOMAIN_ID      | —       | ROS 2 domain ID for network isolation (recommended to set)   |
-| ROS_LOCALHOST_ONLY | —       | Set to '1' to restrict ROS 2 communication to localhost only |
+| Variable             | Default | Description                                                  |
+| -------------------- | ------- | ------------------------------------------------------------ |
+| `ROS_DOMAIN_ID`      | —       | ROS 2 domain ID for network isolation (recommended to set)   |
+| `ROS_LOCALHOST_ONLY` | —       | Set to '1' to restrict ROS 2 communication to localhost only |
 
 ## Features
 
@@ -38,7 +38,7 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 
 ### Dependencies
 
-- [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/): Middleware for robotics
+- [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/): Middleware for robotics (Jazzy)
 - [fastmcp](https://github.com/jlowin/fastmcp): MCP server framework
 - [python](https://www.python.org/): Python programming language
 - [uv](https://github.com/astral-sh/uv): Python package manager (optional)
