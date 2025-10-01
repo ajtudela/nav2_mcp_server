@@ -496,7 +496,6 @@ def _nav2_lifecycle_sync(
 
 
 @with_context_logging
-@with_nav2_active_check
 def _dock_robot_sync(
     x: Optional[float],
     y: Optional[float],
@@ -525,7 +524,6 @@ def _dock_robot_sync(
 
 
 @with_context_logging
-@with_nav2_active_check
 def _undock_robot_sync(
     dock_type: str,
     ctx: Optional[Context] = None,
