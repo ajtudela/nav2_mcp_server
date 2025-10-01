@@ -80,6 +80,22 @@ Or install directly from the repository:
 python3 -m pip install git+https://github.com/ajtudela/nav2_mcp_server.git
 ```
 
+### Docker
+
+#### Build the image
+Build the image:
+
+```bash
+docker build -t nav2_mcp_server:latest .
+```
+
+#### Pull the image
+Pull the latest image from the Docker registry:
+
+```bash
+docker pull ghcr.io/ajtudela/nav2_mcp_server:latest
+```
+
 ## Usage
 
 ### Running with uv
@@ -96,10 +112,9 @@ python3 -m nav2_mcp_server
 
 ### Configuration example for Claude Desktop/Cursor/VSCode
 
-#### Using uv (recommended)
-
 Add this configuration to your application's settings (mcp.json):
 
+#### Using uv (recommended)
 ```json
 {
   "nav2 mcp server": {
@@ -120,7 +135,6 @@ Add this configuration to your application's settings (mcp.json):
 ```
 
 #### Using pip installation
-
 ```json
 {
   "nav2 mcp server": {
@@ -135,5 +149,23 @@ Add this configuration to your application's settings (mcp.json):
       "ROS_LOCALHOST_ONLY": "1"
     }
   }
+}
+```
+
+#### Using Docker
+```json
+"nav2 mcp server": {
+    "type": "stdio",
+    "command": "docker",
+    "args": [
+        "run",
+        "-i",
+        "--rm",
+        "ghcr.io/ajtudela/nav2_mcp_server"
+    ],
+    "env": {
+      "ROS_DOMAIN_ID": "0",
+      "ROS_LOCALHOST_ONLY": "1"
+    }
 }
 ```

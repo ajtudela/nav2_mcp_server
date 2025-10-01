@@ -29,7 +29,10 @@ WORKDIR /app
 
 # Copy dependency files first for better Docker layer caching
 COPY pyproject.toml .
-COPY uv.lock* ./
+COPY uv.lock* .
+
+# Create a src folder
+RUN mkdir -p src
 
 # Install dependencies using uv
 RUN uv sync --frozen --no-dev

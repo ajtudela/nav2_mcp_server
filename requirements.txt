@@ -1,1 +1,2 @@
+anyio
 fastmcp>=2.12.3
