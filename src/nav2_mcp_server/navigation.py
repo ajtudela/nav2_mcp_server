@@ -537,6 +537,117 @@ class NavigationManager:
                 {'error': str(e)}
             )
 
+    def dock_robot(
+        self,
+        dock_pose: Optional[PoseStamped] = None,
+        dock_id: str = '',
+        dock_type: str = '',
+        nav_to_dock: bool = True,
+        context_manager: MCPContextManager = None
+    ) -> str:
+        """Dock the robot to a charging station or dock.
+
+        Parameters
+        ----------
+        dock_pose : PoseStamped, optional
+            Pose of the dock to navigate to. If None, dock_id must be provided.
+        dock_id : str, optional
+            ID of the dock to use. If empty, dock_pose must be provided.
+        dock_type : str, optional
+            Type of dock or empty to use the default.
+        nav_to_dock : bool, default=True
+            Whether to navigate to the staging pose before docking.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Success message with docking details.
+
+        Raises
+        ------
+        NavigationError
+            If docking operation fails.
+        ValueError
+            If neither dock_pose nor dock_id is provided.
+        """
+        if dock_pose is None and not dock_id:
+            raise ValueError("Either dock_pose or dock_id must be provided")
+
+        if dock_pose is not None:
+            # Dock using pose
+            self.navigator.get_logger().info(
+                f'Docking robot at pose: x={dock_pose.pose.position.x:.2f}, '
+                f'y={dock_pose.pose.position.y:.2f}'
+            )
+            context_manager.info_sync(
+                f'Starting dock operation at pose '
+                f'({dock_pose.pose.position.x:.2f},\n'
+                f' {dock_pose.pose.position.y:.2f})'
+            )
+
+            self.navigator.dockRobotByPose(dock_pose, dock_type, nav_to_dock)
+            dock_description = (
+                f'pose ({dock_pose.pose.position.x:.2f},\n'
+                f'      {dock_pose.pose.position.y:.2f})'
+            )
+        else:
+            # Dock using ID
+            self.navigator.get_logger().info(
+                f'Docking robot at dock ID: {dock_id}')
+            context_manager.info_sync(
+                f'Starting dock operation at dock ID: {dock_id}')
+
+            self.navigator.dockRobotByID(dock_id, nav_to_dock)
+            dock_description = f'dock ID: {dock_id}'
+
+        self._monitor_navigation_progress(context_manager, 'dock operation')
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            return f'Successfully docked robot at {dock_description}'
+        else:
+            raise create_navigation_error_from_result(result, 'Dock operation')
+
+    def undock_robot(
+        self,
+        dock_type: str = '',
+        context_manager: MCPContextManager = None
+    ) -> str:
+        """Undock the robot from a charging station or dock.
+
+        Parameters
+        ----------
+        dock_type : str, optional
+            Type of dock to undock from or empty to use the default.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Success message.
+
+        Raises
+        ------
+        NavigationError
+            If undocking operation fails.
+        """
+        self.navigator.get_logger().info('Undocking robot from dock')
+        context_manager.info_sync('Starting undock operation')
+
+        self.navigator.undockRobot(dock_type)
+        self._monitor_navigation_progress(context_manager, 'undock operation')
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            dock_type_desc = f' (type: {dock_type})' if dock_type else ''
+            return f'Successfully undocked robot{dock_type_desc}'
+        else:
+            raise create_navigation_error_from_result(
+                result, 'Undock operation')
+
     def destroy(self) -> None:
         """Clean up navigator resources."""
         if self._navigator:

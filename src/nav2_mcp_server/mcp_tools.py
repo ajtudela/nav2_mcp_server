@@ -173,6 +173,78 @@ def create_mcp_tools(mcp: FastMCP) -> None:
             _backup_robot_sync, distance, speed, ctx
         )
 
+    @mcp.tool(
+        name='dock_robot',
+        description="""Dock the robot to a charging station or dock.
+
+        This tool allows docking the robot either by specifying exact
+        coordinates or by using a predefined dock ID. The robot can
+        optionally navigate to a staging pose before performing the
+        docking maneuver.
+
+        Example usage:
+        - dock robot at coordinates (5.0, 2.0) with 0 degree orientation
+        - dock robot at dock ID "dock_01"
+        - dock robot with specific dock type or empty to use the default
+        """,
+        tags={'dock', 'docking', 'charging', 'station', 'park'},
+        annotations={
+            'title': 'Dock Robot',
+            'readOnlyHint': False,
+            'openWorldHint': False
+        },
+    )
+    async def dock_robot(
+        x: Annotated[float, 'X coordinate of dock in map frame'] = None,
+        y: Annotated[float, 'Y coordinate of dock in map frame'] = None,
+        yaw: Annotated[
+            float, 'Orientation at dock in radians (0 = facing east)'
+        ] = 0.0,
+        dock_id: Annotated[
+            str, 'ID of predefined dock (alternative to coordinates)'
+        ] = '',
+        dock_type: Annotated[
+            str, 'Type of dock or empty to use the default'
+        ] = '',
+        nav_to_dock: Annotated[
+            bool, 'Whether to navigate to staging pose before docking'
+        ] = True,
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Dock the robot to a charging station or dock."""
+        return await anyio.to_thread.run_sync(
+            _dock_robot_sync, x, y, yaw, dock_id, dock_type, nav_to_dock, ctx
+        )
+
+    @mcp.tool(
+        name='undock_robot',
+        description="""Undock the robot from a charging station or dock.
+
+        This tool allows the robot to undock from its current docking position
+        and move to a safe undocked state.
+
+        Example usage:
+        - undock robot from current dock
+        - undock robot from specific dock type
+        """,
+        tags={'undock', 'undocking', 'leave dock', 'depart'},
+        annotations={
+            'title': 'Undock Robot',
+            'readOnlyHint': False,
+            'openWorldHint': False
+        },
+    )
+    async def undock_robot(
+        dock_type: Annotated[
+            str, 'Type of dock to undock from or empty to use default'
+        ] = '',
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Undock the robot from a charging station or dock."""
+        return await anyio.to_thread.run_sync(
+            _undock_robot_sync, dock_type, ctx
+        )
+
     # -------------------------------
     # Costmap Management Tools
     # -------------------------------
@@ -421,3 +493,44 @@ def _nav2_lifecycle_sync(
     else:
         raise ValueError(
             f'Invalid operation "{operation}". Use: startup or shutdown')
+
+
+@with_context_logging
+@with_nav2_active_check
+def _dock_robot_sync(
+    x: Optional[float],
+    y: Optional[float],
+    yaw: float,
+    dock_id: str,
+    dock_type: str,
+    nav_to_dock: bool,
+    ctx: Optional[Context] = None,
+    context_manager: Optional[MCPContextManager] = None
+) -> str:
+    """Dock robot synchronously."""
+    nav_manager = get_navigation_manager()
+
+    # Create dock pose if coordinates are provided
+    dock_pose = None
+    if x is not None and y is not None:
+        dock_pose = nav_manager.create_pose_stamped(x, y, yaw)
+
+    return nav_manager.dock_robot(
+        dock_pose=dock_pose,
+        dock_id=dock_id,
+        dock_type=dock_type,
+        nav_to_dock=nav_to_dock,
+        context_manager=context_manager
+    )
+
+
+@with_context_logging
+@with_nav2_active_check
+def _undock_robot_sync(
+    dock_type: str,
+    ctx: Optional[Context] = None,
+    context_manager: Optional[MCPContextManager] = None
+) -> str:
+    """Undock robot synchronously."""
+    nav_manager = get_navigation_manager()
+    return nav_manager.undock_robot(dock_type, context_manager)
