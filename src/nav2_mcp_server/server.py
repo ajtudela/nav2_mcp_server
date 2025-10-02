@@ -20,7 +20,6 @@ waypoint following, path planning, costmap operations, and lifecycle
 management.
 """
 
-import asyncio
 from typing import Optional
 
 import rclpy
@@ -28,7 +27,7 @@ from fastmcp import FastMCP
 
 from .config import get_config
 from .utils import setup_logging
-from .mcp_tools import create_mcp_tools
+from .tools import create_mcp_tools
 from .resources import create_mcp_resources
 from .navigation import get_navigation_manager
 from .transforms import get_transform_manager
@@ -104,7 +103,3 @@ async def main() -> None:
             transform_manager.destroy()
         rclpy.shutdown()
         logger.info('Nav2 MCP Server shutdown complete')
-
-
-if __name__ == '__main__':
-    asyncio.run(main())
