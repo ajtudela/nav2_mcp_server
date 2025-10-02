@@ -434,7 +434,7 @@ def create_mcp_tools(mcp: FastMCP) -> None:
 # -------------------------------
 
 @with_context_logging
-@with_nav2_active_check
+# @with_nav2_active_check
 def _navigate_to_pose_sync(
     x: float, y: float, yaw: float = 0.0,
     ctx: Optional[Context] = None,
@@ -446,7 +446,7 @@ def _navigate_to_pose_sync(
 
 
 @with_context_logging
-@with_nav2_active_check
+# @with_nav2_active_check
 def _follow_waypoints_sync(
     waypoints_str: str,
     ctx: Optional[Context] = None,
@@ -458,7 +458,7 @@ def _follow_waypoints_sync(
 
 
 @with_context_logging
-@with_nav2_active_check
+# @with_nav2_active_check
 def _spin_robot_sync(
     angle: float,
     ctx: Optional[Context] = None,
@@ -470,7 +470,7 @@ def _spin_robot_sync(
 
 
 @with_context_logging
-@with_nav2_active_check
+# @with_nav2_active_check
 def _backup_robot_sync(
     distance: float, speed: float,
     ctx: Optional[Context] = None,
