@@ -6,19 +6,22 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 
 ## Tools
 
-| Tool                      | Description                                                                       | Parameters                                                                        |
-| ------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **navigate_to_pose**      | Navigate the robot to a specific pose (position and orientation) in the map frame | `x: float, y: float, yaw: float`                                                  |
-| **follow_waypoints**      | Navigate the robot through a sequence of waypoints in order                       | `waypoints: str (JSON array)`                                                     |
-| **spin_robot**            | Rotate the robot in place by a specified angle                                    | `angle: float`                                                                    |
-| **backup_robot**          | Move the robot backward by a specified distance                                   | `distance: float, speed: float`                                                   |
-| **dock_robot**            | Dock the robot to a charging station or dock                                      | `x: float, y: float, yaw: float, dock_id: str, dock_type: str, nav_to_dock: bool` |
-| **undock_robot**          | Undock the robot from a charging station or dock                                  | `dock_type: str`                                                                  |
-| **clear_costmaps**        | Clear robot navigation costmaps to remove stale obstacle data                     | `costmap_type: str`                                                               |
-| **get_robot_pose**        | Get the current position and orientation of the robot                             | —                                                                                 |
-| **get_navigation_status** | Get the current status of the navigation system and any active tasks              | —                                                                                 |
-| **cancel_navigation**     | Cancel the currently active navigation task                                       | —                                                                                 |
-| **nav2_lifecycle**        | Control Nav2 lifecycle (startup or shutdown)                                      | `action: str`                                                                     |
+| Tool                      | Description                                                                       | Parameters                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **navigate_to_pose**      | Navigate the robot to a specific pose (position and orientation) in the map frame | `x: float, y: float, yaw: float`                                                                                   |
+| **follow_waypoints**      | Navigate the robot through a sequence of waypoints in order                       | `waypoints: str (JSON array)`                                                                                      |
+| **spin_robot**            | Rotate the robot in place by a specified angle                                    | `angle: float`                                                                                                     |
+| **backup_robot**          | Move the robot backward by a specified distance                                   | `distance: float, speed: float`                                                                                    |
+| **dock_robot**            | Dock the robot to a charging station or dock                                      | `x: float, y: float, yaw: float, dock_id: str, dock_type: str, nav_to_dock: bool`                                  |
+| **undock_robot**          | Undock the robot from a charging station or dock                                  | `dock_type: str`                                                                                                   |
+| **clear_costmaps**        | Clear robot navigation costmaps to remove stale obstacle data                     | `costmap_type: str`                                                                                                |
+| **get_robot_pose**        | Get the current position and orientation of the robot                             | —                                                                                                                  |
+| **get_navigation_status** | Get the current status of the navigation system and any active tasks              | —                                                                                                                  |
+| **cancel_navigation**     | Cancel the currently active navigation task                                       | —                                                                                                                  |
+| **nav2_lifecycle**        | Control Nav2 lifecycle (startup or shutdown)                                      | `action: str`                                                                                                      |
+| **get_path**              | Compute a navigation path between two poses                                       | `start_x: float, start_y: float, start_yaw: float, goal_x: float, goal_y: float, goal_yaw: float, planner_id: str` |
+| **get_path_from_robot**   | Compute a navigation path from the robot's current pose to a goal pose            | `goal_x: float, goal_y: float, goal_yaw: float, planner_id: str`                                                   |
+
 
 ## Environment Variables
 

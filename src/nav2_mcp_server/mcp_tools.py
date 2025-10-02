@@ -245,6 +245,76 @@ def create_mcp_tools(mcp: FastMCP) -> None:
             _undock_robot_sync, dock_type, ctx
         )
 
+    @mcp.tool(
+        name='get_path',
+        description="""Compute a navigation path between two poses
+        (start and goal) in the map frame, using the planner.
+
+        Example usage:
+        - get path from (x1, y1, yaw1) to (x2, y2, yaw2)
+        - plan path between two positions
+        - compute path for robot navigation
+        """,
+        tags={'path', 'plan', 'compute', 'navigation', 'route', 'planner'},
+        annotations={
+            'title': 'Get Path',
+            'readOnlyHint': True,
+            'openWorldHint': False
+        },
+    )
+    async def get_path(
+        start_x: Annotated[float, 'X coordinate of start pose in map frame'],
+        start_y: Annotated[float, 'Y coordinate of start pose in map frame'],
+        goal_x: Annotated[float, 'X coordinate of goal pose in map frame'],
+        goal_y: Annotated[float, 'Y coordinate of goal pose in map frame'],
+        start_yaw: Annotated[
+            float, 'Orientation of start pose in radians'] = 0.0,
+        goal_yaw: Annotated[
+            float, 'Orientation of goal pose in radians'] = 0.0,
+        planner_id: Annotated[str, 'Planner ID to use (optional)'] = '',
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Compute a navigation path between two poses."""
+        return await anyio.to_thread.run_sync(
+            _get_path_sync,
+            start_x, start_y, start_yaw,
+            goal_x, goal_y, goal_yaw,
+            planner_id, True, ctx
+        )
+
+    @mcp.tool(
+        name='get_path_from_robot',
+        description="""Compute a navigation path between the robot's
+        current pose and a goal pose in the map frame, using the planner.
+
+        Example usage:
+        - get path from robot to (x2, y2, yaw2)
+        - plan path to (x2, y2, yaw2)
+        - compute path for robot navigation
+        """,
+        tags={'path', 'plan', 'compute', 'navigation', 'route', 'planner'},
+        annotations={
+            'title': 'Get Path',
+            'readOnlyHint': True,
+            'openWorldHint': False
+        },
+    )
+    async def get_path_from_robot(
+        goal_x: Annotated[float, 'X coordinate of goal pose in map frame'],
+        goal_y: Annotated[float, 'Y coordinate of goal pose in map frame'],
+        goal_yaw: Annotated[
+            float, 'Orientation of goal pose in radians'] = 0.0,
+        planner_id: Annotated[str, 'Planner ID to use (optional)'] = '',
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Compute a navigation path between two poses."""
+        return await anyio.to_thread.run_sync(
+            _get_path_sync,
+            goal_x, goal_y, goal_yaw,
+            goal_x, goal_y, goal_yaw,
+            planner_id, False, ctx
+        )
+
     # -------------------------------
     # Costmap Management Tools
     # -------------------------------
@@ -532,3 +602,24 @@ def _undock_robot_sync(
     """Undock robot synchronously."""
     nav_manager = get_navigation_manager()
     return nav_manager.undock_robot(dock_type, context_manager)
+
+
+@with_context_logging
+def _get_path_sync(
+    start_x: float,
+    start_y: float,
+    start_yaw: float,
+    goal_x: float,
+    goal_y: float,
+    goal_yaw: float,
+    planner_id: str,
+    use_start: bool,
+    ctx: Optional[Context] = None,
+    context_manager: Optional[MCPContextManager] = None
+) -> str:
+    """Get path synchronously."""
+    nav_manager = get_navigation_manager()
+    return nav_manager.get_path(
+        start_x, start_y, start_yaw, goal_x, goal_y, goal_yaw, planner_id,
+        use_start, context_manager
+    )

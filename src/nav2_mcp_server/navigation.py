@@ -533,6 +533,62 @@ class NavigationManager:
                 {'error': str(e)}
             )
 
+    def get_path(
+        self,
+        start_x: float,
+        start_y: float,
+        start_yaw: float,
+        goal_x: float,
+        goal_y: float,
+        goal_yaw: float,
+        planner_id: str = '',
+        use_start: bool = True,
+        context_manager: Optional[MCPContextManager] = None
+    ) -> str:
+        """
+        Compute a navigation path between two poses (start and goal).
+
+        Parameters
+        ----------
+        start_x : float
+            X coordinate of start pose.
+        start_y : float
+            Y coordinate of start pose.
+        start_yaw : float
+            Orientation of start pose in radians.
+        goal_x : float
+            X coordinate of goal pose.
+        goal_y : float
+            Y coordinate of goal pose.
+        goal_yaw : float
+            Orientation of goal pose in radians.
+        planner_id : str, optional
+            Planner ID to use (default: '').
+        use_start : bool, default=True
+            Whether to include the start pose in the path.
+        context_manager : MCPContextManager, optional
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            JSON string with the computed path.
+        """
+        start_pose = self.create_pose_stamped(start_x, start_y, start_yaw)
+        goal_pose = self.create_pose_stamped(goal_x, goal_y, goal_yaw)
+        path = self.navigator.getPath(
+            start_pose, goal_pose, planner_id, use_start
+        )
+        # If context_manager is provided, log the event
+        if context_manager:
+            context_manager.info_sync(
+                f'Computed path from ({start_x}, {start_y}, {start_yaw}) to '
+                f'({goal_x}, {goal_y}, {goal_yaw})'
+            )
+        # Serialize the path to safe JSON
+        from .utils import safe_json_dumps
+        return safe_json_dumps(path)
+
     def dock_robot(
         self,
         dock_pose: Optional[PoseStamped] = None,
