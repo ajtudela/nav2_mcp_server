@@ -73,7 +73,7 @@ git clone https://github.com/ajtudela/nav2_mcp_server.git
 cd nav2_mcp_server
 # Set up ROS 2 environment variables if needed
 export ROS_DOMAIN_ID=0
-python3 -m pip install -e .
+python3 -m pip install .
 ```
 
 Or install directly from the repository:

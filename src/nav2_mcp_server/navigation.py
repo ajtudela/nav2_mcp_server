@@ -427,11 +427,7 @@ class NavigationManager:
         # Check Nav2 activation status
         nav2_active = False
         try:
-            self.navigator.waitUntilNav2Active(
-                localisation_timeout_sec=(
-                    self.config.navigation.localization_timeout
-                )
-            )
+            self.navigator.waitUntilNav2Active()
             nav2_active = True
         except Exception:
             nav2_active = False

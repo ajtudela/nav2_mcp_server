@@ -29,7 +29,6 @@ class NavigationConfig:
 
     default_backup_speed: float = 0.2
     default_tf_timeout: float = 0.5
-    localization_timeout: float = 1.0
     feedback_update_interval: int = 5
 
     # Frame names

@@ -197,10 +197,7 @@ def with_nav2_active_check(func: F) -> F:
                 context_manager.info_sync(
                     'Waiting for Nav2 to become active...')
 
-            config = get_config()
-            navigator.waitUntilNav2Active(
-                localisation_timeout_sec=config.navigation.localization_timeout
-            )
+            navigator.waitUntilNav2Active()
 
             if context_manager:
                 context_manager.info_sync('Nav2 is active')
