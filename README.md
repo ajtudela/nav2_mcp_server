@@ -4,6 +4,8 @@
 
 An MCP (Model Context Protocol) server that provides tools and resources to control and monitor Nav2 navigation operations, allowing seamless integration with Nav2-enabled robots through the MCP protocol.
 
+![Demo of Nav2 MCP Server](docs/demo.gif)
+
 ## Tools
 
 | Tool                    | Description                                                                       | Parameters                                                                                                         |
