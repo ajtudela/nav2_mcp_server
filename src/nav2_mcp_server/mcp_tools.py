@@ -349,7 +349,7 @@ def create_mcp_tools(mcp: FastMCP) -> None:
         )
 
     # -------------------------------
-    # Status and Information Tools
+    # Information Tools
     # -------------------------------
 
     @mcp.tool(
@@ -373,29 +373,6 @@ def create_mcp_tools(mcp: FastMCP) -> None:
     ) -> str:
         """Get the current pose (position and orientation) of the robot."""
         return await anyio.to_thread.run_sync(_get_robot_pose_sync, ctx)
-
-    @mcp.tool(
-        name='get_navigation_status',
-        description="""Get the current status of the navigation system
-        and any active tasks.
-
-        Example usage:
-        - what is the navigation status?
-        - is the robot currently navigating?
-        - show navigation progress
-        """,
-        tags={'status', 'navigation', 'nav2', 'active', 'task', 'progress'},
-        annotations={
-            'title': 'Get Navigation Status',
-            'readOnlyHint': True,
-            'openWorldHint': False
-        },
-    )
-    async def get_navigation_status(
-        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
-    ) -> str:
-        """Get comprehensive information about current navigation status."""
-        return await anyio.to_thread.run_sync(_get_navigation_status_sync, ctx)
 
     @mcp.tool(
         name='cancel_navigation',
@@ -524,17 +501,6 @@ def _get_robot_pose_sync(
     transform_manager = get_transform_manager()
     pose_info = transform_manager.get_robot_pose(context_manager)
     return safe_json_dumps(pose_info)
-
-
-@with_context_logging
-def _get_navigation_status_sync(
-    ctx: Optional[Context] = None,
-    context_manager: Optional[MCPContextManager] = None
-) -> str:
-    """Get navigation status synchronously."""
-    nav_manager = get_navigation_manager()
-    status_info = nav_manager.get_navigation_status(context_manager)
-    return safe_json_dumps(status_info)
 
 
 @with_context_logging

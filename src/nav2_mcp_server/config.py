@@ -62,7 +62,6 @@ class ServerConfig:
     description: str = 'MCP server wrapping Nav2 action clients'
 
     # Resource URIs
-    status_uri: str = 'nav2://status'
     pose_uri: str = 'nav2://pose'
 
 

@@ -407,68 +407,6 @@ class NavigationManager:
         context_manager.info_sync(message)
         return message
 
-    def get_navigation_status(
-        self, context_manager: MCPContextManager
-    ) -> Dict[str, Any]:
-        """Get current navigation status.
-
-        Parameters
-        ----------
-        context_manager : MCPContextManager
-            Context manager for logging.
-
-        Returns
-        -------
-        dict
-            Navigation status information.
-        """
-        context_manager.info_sync('Getting navigation status...')
-
-        # Check Nav2 activation status
-        nav2_active = False
-        try:
-            self.navigator.waitUntilNav2Active()
-            nav2_active = True
-        except Exception:
-            nav2_active = False
-
-        # Get task status
-        is_task_complete = self.navigator.isTaskComplete()
-
-        # Get feedback if available
-        feedback_info = None
-        if not is_task_complete:
-            feedback = self.navigator.getFeedback()
-            if feedback:
-                feedback_info = {
-                    'has_feedback': True,
-                    'feedback_type': str(type(feedback).__name__)
-                }
-                if hasattr(feedback, 'distance_remaining'):
-                    feedback_info['distance_remaining'] = (
-                        feedback.distance_remaining
-                    )
-                if hasattr(feedback, 'estimated_time_remaining'):
-                    eta_duration = Duration.from_msg(
-                        feedback.estimated_time_remaining)
-                    feedback_info['estimated_time_remaining_seconds'] = (
-                        eta_duration.nanoseconds / 1e9
-                    )
-
-        # Get error information
-        error_code, error_msg = self.navigator.getTaskError()
-
-        status_info = {
-            'nav2_active': nav2_active,
-            'task_complete': is_task_complete,
-            'error_code': error_code,
-            'error_message': error_msg if error_msg else None,
-            'feedback': feedback_info,
-            'timestamp': self.navigator.get_clock().now().to_msg()
-        }
-
-        return status_info
-
     def lifecycle_startup(self, context_manager: MCPContextManager) -> str:
         """Startup Nav2 lifecycle nodes.
 
