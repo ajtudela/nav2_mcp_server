@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ajtudela-nav2-mcp-server-badge.png)](https://mseep.ai/app/ajtudela-nav2-mcp-server)
+
 # Nav2 MCP Server
 
 [![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)](https://github.com/ajtudela/nav2_mcp_server/blob/main/LICENSE)
