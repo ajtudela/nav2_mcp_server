@@ -1,6 +1,8 @@
 # Nav2 MCP Server
 
-[![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)](https://github.com/ajtudela/nav2_mcp_server/blob/main/LICENSE)
+![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
+![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)
+[![Docker image](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml)
 
 An MCP (Model Context Protocol) server that provides tools and resources to control and monitor Nav2 navigation operations, allowing seamless integration with Nav2-enabled robots through the MCP protocol.
 
