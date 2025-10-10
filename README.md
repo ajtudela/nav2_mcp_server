@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/ajtudela-nav2-mcp-server-badge.png)](https://mseep.ai/app/ajtudela-nav2-mcp-server)
+
 # Nav2 MCP Server
 
 ![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
