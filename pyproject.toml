@@ -21,10 +21,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "tox>=4.24.1",
+    "ruff>=0.9.4",
     "pytest>=6.0",
     "pytest-asyncio",
     "pytest-cov",
-    "black",
     "flake8",
     "mypy",
 ]
