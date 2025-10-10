@@ -20,7 +20,7 @@ operations including pose navigation, waypoint following, and robot control.
 
 import json
 import math
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from geometry_msgs.msg import PoseStamped
 from rclpy.duration import Duration

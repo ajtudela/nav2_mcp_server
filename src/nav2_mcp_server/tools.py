@@ -28,7 +28,7 @@ from .transforms import get_transform_manager
 from .utils import (
     MCPContextManager,
     with_context_logging,
-    with_nav2_active_check,
+    # with_nav2_active_check,
     safe_json_dumps
 )
 
