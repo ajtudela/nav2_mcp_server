@@ -10,11 +10,13 @@ authors = [
 ]
 description = "MCP server wrapping Nav2 action clients"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.12"
 dependencies = [
     "anyio",
+    "empy>=4.2",
     "fastmcp>=2.12.3",
-    "numpy",
+    "lark>=1.3.0",
+    "numpy>=2.3.0",
 ]
 
 [project.optional-dependencies]
