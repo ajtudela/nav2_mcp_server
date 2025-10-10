@@ -18,6 +18,7 @@ RUN apk add --no-cache \
     ros-${ROS_DISTRO}-lifecycle-msgs \
     ros-${ROS_DISTRO}-nav-msgs \
     ros-${ROS_DISTRO}-nav2-msgs \
+    ros-${ROS_DISTRO}-tf2-ros-py \
     ros-${ROS_DISTRO}-nav2-simple-commander \
     && rm -rf /var/lib/apt/lists/*
 
