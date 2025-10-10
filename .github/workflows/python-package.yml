@@ -71,5 +71,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           ignore-nothing-to-cache: true
+      # Remove when added tests
+      - name: Install the project
+        run: uv sync --all-extras --dev
       - name: Test with python ${{ matrix.python-version }}
         run: uv run --frozen tox -e py
