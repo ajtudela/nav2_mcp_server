@@ -5,7 +5,7 @@ logging setup, JSON serialization, and helper functions.
 """
 
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -363,3 +363,165 @@ class TestErrorHandling:
         # Should be valid JSON
         parsed = json.loads(result)
         assert isinstance(parsed, dict)
+
+
+class TestAsyncContextManagerMethods:
+    """Tests for async methods of MCPContextManager."""
+
+    async def test_async_info_with_context(self) -> None:
+        """Test async info method with context.
+
+        Verifies that async info method works correctly with context.
+        """
+        mock_context = Mock()
+        mock_context.info = AsyncMock()
+
+        context_manager = MCPContextManager(mock_context)
+
+        await context_manager.info('Test async info message')
+
+        # Context info should be called
+        mock_context.info.assert_called_once_with('Test async info message')
+
+    async def test_async_error_with_context(self) -> None:
+        """Test async error method with context.
+
+        Verifies that async error method works correctly with context.
+        """
+        mock_context = Mock()
+        mock_context.error = AsyncMock()
+
+        context_manager = MCPContextManager(mock_context)
+
+        await context_manager.error('Test async error message')
+
+        # Context error should be called
+        mock_context.error.assert_called_once_with('Test async error message')
+
+    async def test_async_warning_with_context(self) -> None:
+        """Test async warning method with context.
+
+        Verifies that async warning method works correctly with context.
+        """
+        mock_context = Mock()
+        mock_context.warning = AsyncMock()
+
+        context_manager = MCPContextManager(mock_context)
+
+        await context_manager.warning('Test async warning message')
+
+        # Context warning should be called
+        mock_context.warning.assert_called_once_with('Test async warning message')
+
+    async def test_async_info_without_context(self) -> None:
+        """Test async info method without context.
+
+        Verifies that async info method works without context.
+        """
+        context_manager = MCPContextManager()
+
+        # Should not raise exception
+        await context_manager.info('Test message without context')
+
+    async def test_async_error_without_context(self) -> None:
+        """Test async error method without context.
+
+        Verifies that async error method works without context.
+        """
+        context_manager = MCPContextManager()
+
+        # Should not raise exception
+        await context_manager.error('Test error without context')
+
+    async def test_async_warning_without_context(self) -> None:
+        """Test async warning method without context.
+
+        Verifies that async warning method works without context.
+        """
+        context_manager = MCPContextManager()
+
+        # Should not raise exception
+        await context_manager.warning('Test warning without context')
+
+
+class TestUtilityHelpers:
+    """Tests for utility helper functions."""
+
+    def test_create_success_message(self) -> None:
+        """Test success message creation.
+
+        Verifies that success messages are formatted correctly.
+        """
+        from nav2_mcp_server.utils import create_success_message
+
+        result = create_success_message('navigate', {'x': 1.0, 'y': 2.0})
+
+        assert 'Successfully navigate' in result
+        assert 'x=1.0' in result
+        assert 'y=2.0' in result
+
+    def test_create_success_message_empty_details(self) -> None:
+        """Test success message with empty details.
+
+        Verifies that empty details are handled correctly.
+        """
+        from nav2_mcp_server.utils import create_success_message
+
+        result = create_success_message('navigate', {})
+
+        assert 'Successfully navigate' in result
+
+    def test_create_failure_message(self) -> None:
+        """Test failure message creation.
+
+        Verifies that failure messages are formatted correctly.
+        """
+        from nav2_mcp_server.utils import create_failure_message
+
+        result = create_failure_message(
+            'navigate',
+            'timeout',
+            {'duration': 30}
+        )
+
+        assert 'Failed to navigate' in result
+        assert 'timeout' in result
+        assert 'duration=30' in result
+
+    def test_create_failure_message_no_details(self) -> None:
+        """Test failure message without details.
+
+        Verifies that failure messages work without details.
+        """
+        from nav2_mcp_server.utils import create_failure_message
+
+        result = create_failure_message('navigate', 'timeout')
+
+        assert 'Failed to navigate' in result
+        assert 'timeout' in result
+        assert '(' not in result  # No details parentheses
+
+    def test_validate_numeric_range_valid(self) -> None:
+        """Test numeric range validation with valid value.
+
+        Verifies that valid values pass validation.
+        """
+        from nav2_mcp_server.utils import validate_numeric_range
+
+        # Should not raise exception
+        validate_numeric_range(5.0, 0.0, 10.0, 'test_param')
+        validate_numeric_range(0.0, 0.0, 10.0, 'test_param')
+        validate_numeric_range(10.0, 0.0, 10.0, 'test_param')
+
+    def test_validate_numeric_range_invalid(self) -> None:
+        """Test numeric range validation with invalid value.
+
+        Verifies that out-of-range values raise ValueError.
+        """
+        from nav2_mcp_server.utils import validate_numeric_range
+
+        with pytest.raises(ValueError, match='test_param must be between'):
+            validate_numeric_range(-1.0, 0.0, 10.0, 'test_param')
+
+        with pytest.raises(ValueError, match='test_param must be between'):
+            validate_numeric_range(11.0, 0.0, 10.0, 'test_param')
