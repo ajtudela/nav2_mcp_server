@@ -21,16 +21,13 @@ operations including pose navigation, waypoint following, and robot control.
 import json
 import math
 from typing import List, Optional
-from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+
 from geometry_msgs.msg import PoseStamped
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.duration import Duration
 
 from .config import get_config
-from .exceptions import (
-    NavigationError,
-    NavigationErrorCode,
-    create_navigation_error_from_result
-)
+from .exceptions import create_navigation_error_from_result, NavigationError, NavigationErrorCode
 from .utils import MCPContextManager, validate_numeric_range
 
 
@@ -108,22 +105,22 @@ class NavigationManager:
             waypoints_data = json.loads(waypoints_str)
         except json.JSONDecodeError as e:
             raise NavigationError(
-                f"Invalid waypoints JSON format: {e}",
+                f'Invalid waypoints JSON format: {e}',
                 NavigationErrorCode.INVALID_WAYPOINTS,
                 {'json_error': str(e)}
             )
 
         if not isinstance(waypoints_data, list):
             raise NavigationError(
-                "Waypoints must be a list of [x, y] coordinates",
+                'Waypoints must be a list of [x, y] coordinates',
                 NavigationErrorCode.INVALID_WAYPOINTS,
                 {'received_type': type(waypoints_data).__name__}
             )
 
         if len(waypoints_data) > self.config.navigation.max_waypoints:
             raise NavigationError(
-                f"Too many waypoints. Maximum: "
-                f"{self.config.navigation.max_waypoints}",
+                f'Too many waypoints. Maximum: '
+                f'{self.config.navigation.max_waypoints}',
                 NavigationErrorCode.INVALID_WAYPOINTS,
                 {'waypoint_count': len(waypoints_data)}
             )
@@ -132,7 +129,7 @@ class NavigationManager:
         for i, waypoint in enumerate(waypoints_data):
             if not isinstance(waypoint, list) or len(waypoint) != 2:
                 raise NavigationError(
-                    f"Waypoint {i} must be [x, y] format",
+                    f'Waypoint {i} must be [x, y] format',
                     NavigationErrorCode.INVALID_WAYPOINTS,
                     {'waypoint_index': i, 'waypoint_data': waypoint}
                 )
@@ -142,7 +139,7 @@ class NavigationManager:
                 poses.append(self.create_pose_stamped(x, y))
             except (ValueError, TypeError) as e:
                 raise NavigationError(
-                    f"Invalid coordinates in waypoint {i}: {e}",
+                    f'Invalid coordinates in waypoint {i}: {e}',
                     NavigationErrorCode.INVALID_WAYPOINTS,
                     {'waypoint_index': i, 'error': str(e)}
                 )
@@ -378,7 +375,7 @@ class NavigationManager:
 
         except Exception as e:
             raise NavigationError(
-                f"Failed to clear {costmap_type} costmap(s): {str(e)}",
+                f'Failed to clear {costmap_type} costmap(s): {str(e)}',
                 NavigationErrorCode.ROS_ERROR,
                 {'costmap_type': costmap_type, 'error': str(e)}
             )
@@ -434,7 +431,7 @@ class NavigationManager:
             return message
         except Exception as e:
             raise NavigationError(
-                f"Failed to startup Nav2 lifecycle: {str(e)}",
+                f'Failed to startup Nav2 lifecycle: {str(e)}',
                 NavigationErrorCode.ROS_ERROR,
                 {'error': str(e)}
             )
@@ -466,7 +463,7 @@ class NavigationManager:
             return message
         except Exception as e:
             raise NavigationError(
-                f"Failed to shutdown Nav2 lifecycle: {str(e)}",
+                f'Failed to shutdown Nav2 lifecycle: {str(e)}',
                 NavigationErrorCode.ROS_ERROR,
                 {'error': str(e)}
             )
@@ -563,7 +560,7 @@ class NavigationManager:
             If neither dock_pose nor dock_id is provided.
         """
         if dock_pose is None and not dock_id:
-            raise ValueError("Either dock_pose or dock_id must be provided")
+            raise ValueError('Either dock_pose or dock_id must be provided')
 
         if dock_pose is not None:
             # Dock using pose

@@ -38,12 +38,12 @@ class TestNavigateToPose:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "navigate_to_pose",
+                                'navigate_to_pose',
                                 {
-                                    "x": sample_pose['position']['x'],
-                                    "y": sample_pose['position']['y'],
-                                    "theta": 1.57,
-                                    "frame_id": "map"
+                                    'x': sample_pose['position']['x'],
+                                    'y': sample_pose['position']['y'],
+                                    'theta': 1.57,
+                                    'frame_id': 'map'
                                 }
                             )
 
@@ -66,12 +66,12 @@ class TestNavigateToPose:
                         async with Client(server) as client:
                             with pytest.raises(Exception):
                                 await client.call_tool(
-                                    "navigate_to_pose",
+                                    'navigate_to_pose',
                                     {
-                                        "x": "invalid",
-                                        "y": 2.0,
-                                        "theta": 1.57,
-                                        "frame_id": "map"
+                                        'x': 'invalid',
+                                        'y': 2.0,
+                                        'theta': 1.57,
+                                        'frame_id': 'map'
                                     }
                                 )
 
@@ -103,8 +103,8 @@ class TestFollowWaypoints:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "follow_waypoints",
-                                {"waypoints": waypoints_str}
+                                'follow_waypoints',
+                                {'waypoints': waypoints_str}
                             )
 
                             assert result.content
@@ -125,8 +125,8 @@ class TestFollowWaypoints:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "follow_waypoints",
-                                {"waypoints": "[]"}
+                                'follow_waypoints',
+                                {'waypoints': '[]'}
                             )
                             
                             # Should handle empty waypoints gracefully
@@ -157,8 +157,8 @@ class TestSpinRobot:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "spin_robot",
-                                {"angular_distance": 1.57}
+                                'spin_robot',
+                                {'angular_distance': 1.57}
                             )
 
                             assert result.content
@@ -180,8 +180,8 @@ class TestSpinRobot:
                         async with Client(server) as client:
                             with pytest.raises(Exception):
                                 await client.call_tool(
-                                    "spin_robot",
-                                    {"angular_distance": "invalid"}
+                                    'spin_robot',
+                                    {'angular_distance': 'invalid'}
                                 )
 
 
@@ -209,10 +209,10 @@ class TestBackupRobot:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "backup_robot",
+                                'backup_robot',
                                 {
-                                    "backup_distance": 1.0,
-                                    "backup_speed": 0.15
+                                    'backup_distance': 1.0,
+                                    'backup_speed': 0.15
                                 }
                             )
 
@@ -245,8 +245,8 @@ class TestDockRobot:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "dock_robot",
-                                {"dock_id": "dock_1"}
+                                'dock_robot',
+                                {'dock_id': 'dock_1'}
                             )
 
                             assert result.content
@@ -276,8 +276,8 @@ class TestUndockRobot:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "undock_robot",
-                                {"dock_type": "charging_dock"}
+                                'undock_robot',
+                                {'dock_type': 'charging_dock'}
                             )
 
                             assert result.content
@@ -311,15 +311,15 @@ class TestGetPath:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "get_path",
+                                'get_path',
                                 {
-                                    "start_x": 0.0,
-                                    "start_y": 0.0,
-                                    "start_theta": 0.0,
-                                    "goal_x": 2.0,
-                                    "goal_y": 2.0,
-                                    "goal_theta": 1.57,
-                                    "planner_id": "GridBased"
+                                    'start_x': 0.0,
+                                    'start_y': 0.0,
+                                    'start_theta': 0.0,
+                                    'goal_x': 2.0,
+                                    'goal_y': 2.0,
+                                    'goal_theta': 1.57,
+                                    'planner_id': 'GridBased'
                                 }
                             )
 
@@ -354,12 +354,12 @@ class TestGetPathFromRobot:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "get_path_from_robot",
+                                'get_path_from_robot',
                                 {
-                                    "goal_x": 2.0,
-                                    "goal_y": 2.0,
-                                    "goal_theta": 1.57,
-                                    "planner_id": "GridBased"
+                                    'goal_x': 2.0,
+                                    'goal_y': 2.0,
+                                    'goal_theta': 1.57,
+                                    'planner_id': 'GridBased'
                                 }
                             )
 
@@ -390,7 +390,7 @@ class TestClearCostmaps:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "clear_costmaps",
+                                'clear_costmaps',
                                 {}
                             )
 
@@ -421,7 +421,7 @@ class TestGetRobotPose:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "get_robot_pose",
+                                'get_robot_pose',
                                 {}
                             )
 
@@ -452,7 +452,7 @@ class TestCancelNavigation:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "cancel_navigation",
+                                'cancel_navigation',
                                 {}
                             )
 
@@ -484,8 +484,8 @@ class TestNav2Lifecycle:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "nav2_lifecycle",
-                                {"action": "startup"}
+                                'nav2_lifecycle',
+                                {'action': 'startup'}
                             )
 
                             assert result.content
@@ -511,8 +511,8 @@ class TestNav2Lifecycle:
                         server = create_server()
                         async with Client(server) as client:
                             result = await client.call_tool(
-                                "nav2_lifecycle",
-                                {"action": "shutdown"}
+                                'nav2_lifecycle',
+                                {'action': 'shutdown'}
                             )
 
                             assert result.content
@@ -529,7 +529,7 @@ class TestToolErrorHandling:
         """
         mock_nav_manager = Mock()
         mock_nav_manager.navigate_to_pose.side_effect = Exception(
-            "Navigation system unavailable"
+            'Navigation system unavailable'
         )
         
         with patch('nav2_mcp_server.server.get_config'):
@@ -545,18 +545,18 @@ class TestToolErrorHandling:
                         async with Client(server) as client:
                             # Should handle the exception and return error info
                             result = await client.call_tool(
-                                "navigate_to_pose",
+                                'navigate_to_pose',
                                 {
-                                    "x": 1.0,
-                                    "y": 2.0,
-                                    "theta": 1.57,
-                                    "frame_id": "map"
+                                    'x': 1.0,
+                                    'y': 2.0,
+                                    'theta': 1.57,
+                                    'frame_id': 'map'
                                 }
                             )
                             
                             # Result should contain error information
                             assert result.content
-                            assert "error" in str(result.content).lower()
+                            assert 'error' in str(result.content).lower()
 
     async def test_transform_manager_exception(self):
         """Test tool behavior when TransformManager raises exception.
@@ -565,7 +565,7 @@ class TestToolErrorHandling:
         """
         mock_tf_manager = Mock()
         mock_tf_manager.get_robot_pose.side_effect = Exception(
-            "Transform lookup failed"
+            'Transform lookup failed'
         )
         
         with patch('nav2_mcp_server.server.get_config'):
@@ -581,10 +581,10 @@ class TestToolErrorHandling:
                         async with Client(server) as client:
                             # Should handle the exception and return error info
                             result = await client.call_tool(
-                                "get_robot_pose",
+                                'get_robot_pose',
                                 {}
                             )
                             
                             # Result should contain error information
                             assert result.content
-                            assert "error" in str(result.content).lower()
+                            assert 'error' in str(result.content).lower()

@@ -18,8 +18,8 @@ This module defines specific exception classes for different error conditions
 that can occur during navigation operations.
 """
 
-from typing import Optional, Any
 from enum import Enum
+from typing import Any, Optional
 
 
 class NavigationErrorCode(Enum):
@@ -183,19 +183,19 @@ def create_navigation_error_from_result(
 
     if result == TaskResult.FAILED:
         return NavigationError(
-            f"{operation} failed",
+            f'{operation} failed',
             NavigationErrorCode.NAVIGATION_FAILED,
             {'task_result': 'FAILED'}
         )
     elif result == TaskResult.CANCELED:
         return NavigationError(
-            f"{operation} was canceled",
+            f'{operation} was canceled',
             NavigationErrorCode.NAVIGATION_CANCELED,
             {'task_result': 'CANCELED'}
         )
     else:
         return NavigationError(
-            f"{operation} completed with unexpected result: {result}",
+            f'{operation} completed with unexpected result: {result}',
             NavigationErrorCode.UNKNOWN,
             {'task_result': str(result)}
         )

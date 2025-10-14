@@ -18,10 +18,10 @@ async def test_server_initialization():
     the correct name and configuration.
     """
     with patch('nav2_mcp_server.server.get_config') as mock_config:
-        mock_config.return_value.server.server_name = "Nav2 MCP"
-        
+        mock_config.return_value.server.server_name = 'Nav2 MCP'
+
         server = create_server()
-        assert server.name == "Nav2 MCP"
+        assert server.name == 'Nav2 MCP'
         assert server is not None
 
 
@@ -37,7 +37,7 @@ async def test_server_has_tools():
                 server = create_server()
                 tools = await server.get_tools()
                 assert len(tools) > 0, (
-                    "Server should have at least one tool registered"
+                    'Server should have at least one tool registered'
                 )
 
 
@@ -51,7 +51,7 @@ async def test_server_tool_names():
             with patch('nav2_mcp_server.tools.get_transform_manager'):
                 server = create_server()
                 tools = await server.get_tools()
-                
+
                 # get_tools() returns a dict mapping names to tool definitions
                 if isinstance(tools, dict):
                     tool_names = list(tools.keys())
@@ -63,18 +63,18 @@ async def test_server_tool_names():
                     tool_names = []
 
                 expected_tools = [
-                    "navigate_to_pose",
-                    "follow_waypoints",
-                    "spin_robot",
-                    "backup_robot",
-                    "dock_robot",
-                    "undock_robot",
-                    "get_path",
-                    "get_path_from_robot",
-                    "clear_costmaps",
-                    "get_robot_pose",
-                    "cancel_navigation",
-                    "nav2_lifecycle",
+                    'navigate_to_pose',
+                    'follow_waypoints',
+                    'spin_robot',
+                    'backup_robot',
+                    'dock_robot',
+                    'undock_robot',
+                    'get_path',
+                    'get_path_from_robot',
+                    'clear_costmaps',
+                    'get_robot_pose',
+                    'cancel_navigation',
+                    'nav2_lifecycle',
                 ]
 
                 for expected_tool in expected_tools:
@@ -94,7 +94,7 @@ async def test_server_has_resources():
             server = create_server()
             resources = await server.get_resources()
             assert len(resources) > 0, (
-                "Server should have at least one resource registered"
+                'Server should have at least one resource registered'
             )
 
 
@@ -113,7 +113,7 @@ async def test_server_client_connection():
                         # Test that client is connected
                         result = await client.ping()
                         assert result is True, (
-                            "Client should be able to ping server"
+                            'Client should be able to ping server'
                         )
 
 
@@ -130,7 +130,7 @@ async def test_server_list_tools_via_client():
                     async with Client(server) as client:
                         tools_response = await client.list_tools()
                         assert len(tools_response) > 0, (
-                            "Client should receive list of available tools"
+                            'Client should receive list of available tools'
                         )
 
 
@@ -147,5 +147,5 @@ async def test_server_list_resources_via_client():
                     async with Client(server) as client:
                         resources_response = await client.list_resources()
                         assert len(resources_response) > 0, (
-                            "Client should receive list of available resources"
+                            'Client should receive list of available resources'
                         )

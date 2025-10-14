@@ -5,16 +5,16 @@ including mock ROS2 interfaces, sample navigation data, and server
 configurations.
 """
 
+import math
 from typing import Any, Dict, List
 from unittest.mock import Mock
-import math
 
 import pytest
 from geometry_msgs.msg import PoseStamped
 from tf2_ros import Buffer
 
-from nav2_mcp_server.server import create_server
 from nav2_mcp_server.navigation import NavigationManager
+from nav2_mcp_server.server import create_server
 from nav2_mcp_server.transforms import TransformManager
 from nav2_mcp_server.utils import MCPContextManager
 
@@ -37,36 +37,36 @@ def mock_navigation_manager() -> Mock:
         Mock NavigationManager with preset return values and side effects.
     """
     mock_nav_manager = Mock(spec=NavigationManager)
-    
+
     # Mock successful navigation result
     mock_nav_manager.navigate_to_pose.return_value = (
-        "Navigation to pose started successfully"
+        'Navigation to pose started successfully'
     )
     mock_nav_manager.follow_waypoints.return_value = (
-        "Waypoint following started successfully"
+        'Waypoint following started successfully'
     )
     mock_nav_manager.spin_robot.return_value = (
-        "Spin operation started successfully"
+        'Spin operation started successfully'
     )
     mock_nav_manager.backup_robot.return_value = (
-        "Backup operation started successfully"
+        'Backup operation started successfully'
     )
     mock_nav_manager.dock_robot.return_value = (
-        "Docking operation started successfully"
+        'Docking operation started successfully'
     )
     mock_nav_manager.undock_robot.return_value = (
-        "Undocking operation started successfully"
+        'Undocking operation started successfully'
     )
     mock_nav_manager.clear_costmaps.return_value = (
-        "Costmaps cleared successfully"
+        'Costmaps cleared successfully'
     )
     mock_nav_manager.cancel_navigation.return_value = (
-        "Navigation cancelled successfully"
+        'Navigation cancelled successfully'
     )
     mock_nav_manager.nav2_lifecycle.return_value = (
-        "Lifecycle operation completed successfully"
+        'Lifecycle operation completed successfully'
     )
-    
+
     # Mock path planning results
     mock_nav_manager.get_path.return_value = {
         'path': [
@@ -77,7 +77,7 @@ def mock_navigation_manager() -> Mock:
         'length': 2.828,
         'status': 'success'
     }
-    
+
     mock_nav_manager.get_path_from_robot.return_value = {
         'path': [
             {'x': 1.0, 'y': 1.0, 'theta': 0.0},
@@ -86,7 +86,7 @@ def mock_navigation_manager() -> Mock:
         'length': 1.414,
         'status': 'success'
     }
-    
+
     return mock_nav_manager
 
 
@@ -100,7 +100,7 @@ def mock_transform_manager() -> Mock:
         Mock TransformManager with preset return values.
     """
     mock_tf_manager = Mock(spec=TransformManager)
-    
+
     # Mock robot pose
     mock_tf_manager.get_robot_pose.return_value = {
         'pose': {
@@ -114,7 +114,7 @@ def mock_transform_manager() -> Mock:
         'yaw': 0.0,
         'status': 'success'
     }
-    
+
     return mock_tf_manager
 
 
@@ -210,16 +210,16 @@ def mock_ros_pose_stamped() -> Mock:
     pose_stamped.header.frame_id = 'map'
     pose_stamped.header.stamp.sec = 1640995200
     pose_stamped.header.stamp.nanosec = 0
-    
+
     pose_stamped.pose.position.x = 1.0
     pose_stamped.pose.position.y = 2.0
     pose_stamped.pose.position.z = 0.0
-    
+
     pose_stamped.pose.orientation.x = 0.0
     pose_stamped.pose.orientation.y = 0.0
     pose_stamped.pose.orientation.z = 0.0
     pose_stamped.pose.orientation.w = 1.0
-    
+
     return pose_stamped
 
 
@@ -233,7 +233,7 @@ def mock_tf_buffer() -> Mock:
         Mock TF2 Buffer with transform lookup capabilities.
     """
     mock_buffer = Mock(spec=Buffer)
-    
+
     # Mock transform lookup
     mock_transform = Mock()
     mock_transform.transform.translation.x = 1.0
@@ -245,9 +245,9 @@ def mock_tf_buffer() -> Mock:
     mock_transform.transform.rotation.w = 1.0
     mock_transform.header.frame_id = 'map'
     mock_transform.child_frame_id = 'base_link'
-    
+
     mock_buffer.lookup_transform.return_value = mock_transform
-    
+
     return mock_buffer
 
 
@@ -304,13 +304,13 @@ def lifecycle_nodes() -> List[str]:
 @pytest.fixture
 def ros_connection_error() -> Exception:
     """ROS connection error for testing."""
-    return ConnectionError("Failed to connect to ROS2 nodes")
+    return ConnectionError('Failed to connect to ROS2 nodes')
 
 
 @pytest.fixture
 def navigation_timeout_error() -> Exception:
     """Navigation timeout error for testing."""
-    return TimeoutError("Navigation action timed out")
+    return TimeoutError('Navigation action timed out')
 
 
 @pytest.fixture

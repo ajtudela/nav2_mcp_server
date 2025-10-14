@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .server import main
+"""Main entry point for the nav2_mcp_server package."""
+
 import asyncio
+
+from .server import main
+
 asyncio.run(main())

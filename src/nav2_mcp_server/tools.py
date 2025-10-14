@@ -19,17 +19,17 @@ and transform operations with proper async/sync handling.
 """
 
 from typing import Annotated, Optional
+
 import anyio
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 
 from .config import get_config
 from .navigation import get_navigation_manager
 from .transforms import get_transform_manager
-from .utils import (
+from .utils import (  # with_nav2_active_check,
     MCPContextManager,
+    safe_json_dumps,
     with_context_logging,
-    # with_nav2_active_check,
-    safe_json_dumps
 )
 
 
@@ -184,7 +184,7 @@ def create_mcp_tools(mcp: FastMCP) -> None:
 
         Example usage:
         - dock robot at coordinates (5.0, 2.0) with 0 degree orientation
-        - dock robot at dock ID "dock_01"
+        - dock robot at dock ID 'dock_01'
         - dock robot with specific dock type or empty to use the default
         """,
         tags={'dock', 'docking', 'charging', 'station', 'park'},
@@ -528,7 +528,7 @@ def _nav2_lifecycle_sync(
         return nav_manager.lifecycle_shutdown(context_manager)
     else:
         raise ValueError(
-            f'Invalid operation "{operation}". Use: startup or shutdown')
+            f'Invalid operation "{operation}". Use: "startup" or "shutdown"')
 
 
 @with_context_logging

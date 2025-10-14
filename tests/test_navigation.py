@@ -6,6 +6,7 @@ action management.
 """
 
 from unittest.mock import Mock, patch
+
 import pytest
 
 from nav2_mcp_server.navigation import NavigationManager
@@ -64,7 +65,7 @@ class TestCreatePoseStamped:
             mock_pose.return_value = mock_pose_instance
 
             result = nav_manager.create_pose_stamped(
-                1.0, 2.0, 1.57, "map", context_manager
+                1.0, 2.0, 1.57, 'map', context_manager
             )
 
             assert result is mock_pose_instance
@@ -84,7 +85,7 @@ class TestCreatePoseStamped:
                 mock_quat.return_value = {'x': 0, 'y': 0, 'z': 0.707, 'w': 0.707}
 
                 nav_manager.create_pose_stamped(
-                    1.0, 2.0, 1.57, "map", context_manager
+                    1.0, 2.0, 1.57, 'map', context_manager
                 )
 
                 mock_quat.assert_called_once_with(1.57)
@@ -125,7 +126,7 @@ class TestParseWaypoints:
         context_manager = MCPContextManager()
 
         with pytest.raises(ValueError):
-            nav_manager.parse_waypoints("invalid json", context_manager)
+            nav_manager.parse_waypoints('invalid json', context_manager)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_parse_waypoints_empty_list(self, mock_navigator_class):
@@ -134,9 +135,9 @@ class TestParseWaypoints:
         Verifies that empty waypoint lists are handled correctly.
         """
         nav_manager = NavigationManager()
-        context_manager = MCPContextManager() 
+        context_manager = MCPContextManager()
 
-        result = nav_manager.parse_waypoints("[]", context_manager)
+        result = nav_manager.parse_waypoints('[]', context_manager)
 
         assert result == []
 
@@ -162,10 +163,10 @@ class TestNavigateToPose:
             mock_create.return_value = mock_pose
 
             result = nav_manager.navigate_to_pose(
-                1.0, 2.0, 1.57, "map", context_manager
+                1.0, 2.0, 1.57, 'map', context_manager
             )
 
-            assert "started successfully" in result
+            assert 'started successfully' in result
             mock_navigator.goToPose.assert_called_once_with(mock_pose)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -176,7 +177,7 @@ class TestNavigateToPose:
         and error messages are returned.
         """
         mock_navigator = Mock()
-        mock_navigator.goToPose.side_effect = Exception("Navigation failed")
+        mock_navigator.goToPose.side_effect = Exception('Navigation failed')
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -184,10 +185,10 @@ class TestNavigateToPose:
 
         with patch.object(nav_manager, 'create_pose_stamped'):
             result = nav_manager.navigate_to_pose(
-                1.0, 2.0, 1.57, "map", context_manager
+                1.0, 2.0, 1.57, 'map', context_manager
             )
 
-            assert "error" in result or "failed" in result
+            assert 'error' in result or 'failed' in result
 
 
 class TestFollowWaypoints:
@@ -214,7 +215,7 @@ class TestFollowWaypoints:
 
             result = nav_manager.follow_waypoints(waypoints_str, context_manager)
 
-            assert "started successfully" in result
+            assert 'started successfully' in result
             mock_navigator.followWaypoints.assert_called_once_with(mock_waypoints)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -229,9 +230,9 @@ class TestFollowWaypoints:
         with patch.object(nav_manager, 'parse_waypoints') as mock_parse:
             mock_parse.return_value = []
 
-            result = nav_manager.follow_waypoints("[]", context_manager)
+            result = nav_manager.follow_waypoints('[]', context_manager)
 
-            assert "no waypoints" in result.lower() or "empty" in result.lower()
+            assert 'no waypoints' in result.lower() or 'empty' in result.lower()
 
 
 class TestSpinRobot:
@@ -252,7 +253,7 @@ class TestSpinRobot:
 
         result = nav_manager.spin_robot(1.57, context_manager)
 
-        assert "started successfully" in result
+        assert 'started successfully' in result
         mock_navigator.spin.assert_called_once_with(1.57)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -262,7 +263,7 @@ class TestSpinRobot:
         Verifies that spin operation failures are handled gracefully.
         """
         mock_navigator = Mock()
-        mock_navigator.spin.side_effect = Exception("Spin failed")
+        mock_navigator.spin.side_effect = Exception('Spin failed')
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -270,7 +271,7 @@ class TestSpinRobot:
 
         result = nav_manager.spin_robot(1.57, context_manager)
 
-        assert "error" in result or "failed" in result
+        assert 'error' in result or 'failed' in result
 
 
 class TestBackupRobot:
@@ -291,7 +292,7 @@ class TestBackupRobot:
 
         result = nav_manager.backup_robot(1.0, 0.15, context_manager)
 
-        assert "started successfully" in result
+        assert 'started successfully' in result
         mock_navigator.backup.assert_called_once_with(1.0, 0.15)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -309,7 +310,7 @@ class TestBackupRobot:
         # Test with default speed parameter
         result = nav_manager.backup_robot(1.0, None, context_manager)
 
-        assert "started successfully" in result
+        assert 'started successfully' in result
         # Should use default speed if None provided
         mock_navigator.backup.assert_called_once()
 
@@ -331,7 +332,7 @@ class TestClearCostmaps:
 
         result = nav_manager.clear_costmaps(context_manager)
 
-        assert "cleared successfully" in result
+        assert 'cleared successfully' in result
         mock_navigator.clearAllCostmaps.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -341,7 +342,7 @@ class TestClearCostmaps:
         Verifies that costmap clearing failures are handled properly.
         """
         mock_navigator = Mock()
-        mock_navigator.clearAllCostmaps.side_effect = Exception("Clear failed")
+        mock_navigator.clearAllCostmaps.side_effect = Exception('Clear failed')
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -349,7 +350,7 @@ class TestClearCostmaps:
 
         result = nav_manager.clear_costmaps(context_manager)
 
-        assert "error" in result or "failed" in result
+        assert 'error' in result or 'failed' in result
 
 
 class TestCancelNavigation:
@@ -369,7 +370,7 @@ class TestCancelNavigation:
 
         result = nav_manager.cancel_navigation(context_manager)
 
-        assert "cancelled successfully" in result
+        assert 'cancelled successfully' in result
         mock_navigator.cancelTask.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -379,7 +380,7 @@ class TestCancelNavigation:
         Verifies that cancellation failures are handled gracefully.
         """
         mock_navigator = Mock()
-        mock_navigator.cancelTask.side_effect = Exception("Cancel failed")
+        mock_navigator.cancelTask.side_effect = Exception('Cancel failed')
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -387,7 +388,7 @@ class TestCancelNavigation:
 
         result = nav_manager.cancel_navigation(context_manager)
 
-        assert "error" in result or "failed" in result
+        assert 'error' in result or 'failed' in result
 
 
 class TestNavigationManagerUtilities:

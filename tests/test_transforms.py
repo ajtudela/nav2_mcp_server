@@ -4,9 +4,10 @@ This module tests the TransformManager class and its transform
 operations including robot pose retrieval and coordinate transformations.
 """
 
-from unittest.mock import Mock, patch
-import pytest
 import math
+from unittest.mock import Mock, patch
+
+import pytest
 
 from nav2_mcp_server.transforms import TransformManager
 from nav2_mcp_server.utils import MCPContextManager
@@ -119,7 +120,7 @@ class TestGetRobotPose:
 
         # Mock transform failure
         mock_buffer_instance.lookup_transform.side_effect = Exception(
-            "Transform not available"
+            'Transform not available'
         )
 
         tf_manager = TransformManager()
@@ -295,7 +296,7 @@ class TestQuaternionOperations:
             if diff > math.pi:
                 diff = 2 * math.pi - diff
 
-            assert diff < 0.01, f"Roundtrip failed for {original_yaw}"
+            assert diff < 0.01, f'Roundtrip failed for {original_yaw}'
 
 
 class TestTransformManagerDestroy:
@@ -343,7 +344,7 @@ class TestTransformManagerErrorHandling:
         # Mock timeout exception
         from tf2_ros import LookupException
         mock_buffer_instance.lookup_transform.side_effect = LookupException(
-            "Transform timeout"
+            'Transform timeout'
         )
 
         tf_manager = TransformManager()
@@ -361,7 +362,7 @@ class TestTransformManagerErrorHandling:
 
         Verifies that initialization failures are handled gracefully.
         """
-        mock_create_node.side_effect = Exception("Node creation failed")
+        mock_create_node.side_effect = Exception('Node creation failed')
 
         with pytest.raises(Exception):
             TransformManager()

@@ -4,15 +4,16 @@ This module tests utility functions including MCPContextManager,
 logging setup, JSON serialization, and helper functions.
 """
 
-from unittest.mock import Mock, patch
-import pytest
 import json
+from unittest.mock import Mock, patch
+
+import pytest
 
 from nav2_mcp_server.utils import (
     MCPContextManager,
-    setup_logging,
     safe_json_dumps,
-    with_context_logging
+    setup_logging,
+    with_context_logging,
 )
 
 
@@ -40,7 +41,7 @@ class TestMCPContextManager:
         context_manager = MCPContextManager()
 
         # Should not raise exception
-        context_manager.info("Test info message")
+        context_manager.info('Test info message')
 
     def test_mcp_context_manager_warning(self):
         """Test MCPContextManager warning method.
@@ -50,7 +51,7 @@ class TestMCPContextManager:
         context_manager = MCPContextManager()
 
         # Should not raise exception
-        context_manager.warning("Test warning message")
+        context_manager.warning('Test warning message')
 
     def test_mcp_context_manager_error(self):
         """Test MCPContextManager error method.
@@ -60,7 +61,7 @@ class TestMCPContextManager:
         context_manager = MCPContextManager()
 
         # Should not raise exception
-        context_manager.error("Test error message")
+        context_manager.error('Test error message')
 
     def test_mcp_context_manager_with_real_context(self):
         """Test MCPContextManager with real MCP Context.
@@ -75,13 +76,13 @@ class TestMCPContextManager:
 
         context_manager = MCPContextManager(mock_context)
 
-        context_manager.info("Test message")
-        context_manager.warning("Warning message")
-        context_manager.error("Error message")
+        context_manager.info('Test message')
+        context_manager.warning('Warning message')
+        context_manager.error('Error message')
 
-        mock_context.info.assert_called_once_with("Test message")
-        mock_context.warning.assert_called_once_with("Warning message")
-        mock_context.error.assert_called_once_with("Error message")
+        mock_context.info.assert_called_once_with('Test message')
+        mock_context.warning.assert_called_once_with('Warning message')
+        mock_context.error.assert_called_once_with('Error message')
 
 
 class TestLoggingSetup:
@@ -246,16 +247,16 @@ class TestWithContextLogging:
         and adds context logging.
         """
         # Mock function to decorate
-        @with_context_logging("Test operation")
+        @with_context_logging('Test operation')
         def test_function(context_manager):
-            return "success"
+            return 'success'
 
         context_manager = MCPContextManager()
 
         with patch.object(context_manager, 'info') as mock_info:
             result = test_function(context_manager)
 
-            assert result == "success"
+            assert result == 'success'
             # Should have called info at least once
             assert mock_info.call_count >= 1
 
@@ -264,9 +265,9 @@ class TestWithContextLogging:
 
         Verifies that exceptions are properly logged and re-raised.
         """
-        @with_context_logging("Test operation with error")
+        @with_context_logging('Test operation with error')
         def failing_function(context_manager):
-            raise ValueError("Test error")
+            raise ValueError('Test error')
 
         context_manager = MCPContextManager()
 
@@ -282,9 +283,9 @@ class TestWithContextLogging:
 
         Verifies that the decorator works with async functions.
         """
-        @with_context_logging("Async test operation")
+        @with_context_logging('Async test operation')
         async def async_test_function(context_manager):
-            return "async success"
+            return 'async success'
 
         context_manager = MCPContextManager()
 
@@ -332,16 +333,16 @@ class TestErrorHandling:
         """
         # Create a mock context that raises exceptions
         broken_context = Mock()
-        broken_context.info.side_effect = Exception("Context broken")
-        broken_context.warning.side_effect = Exception("Context broken")
-        broken_context.error.side_effect = Exception("Context broken")
+        broken_context.info.side_effect = Exception('Context broken')
+        broken_context.warning.side_effect = Exception('Context broken')
+        broken_context.error.side_effect = Exception('Context broken')
 
         context_manager = MCPContextManager(broken_context)
 
         # Should not raise exceptions even with broken context
-        context_manager.info("Test message")
-        context_manager.warning("Warning message")
-        context_manager.error("Error message")
+        context_manager.info('Test message')
+        context_manager.warning('Warning message')
+        context_manager.error('Error message')
 
     def test_safe_json_dumps_circular_reference(self):
         """Test JSON serialization with circular reference.

@@ -18,9 +18,9 @@ This module provides centralized configuration management with default values
 and validation for the Nav2 MCP server application.
 """
 
-from dataclasses import dataclass
-from typing import Dict, Any, Optional
 import logging
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -48,7 +48,7 @@ class LoggingConfig:
     """Configuration for logging."""
 
     level: int = logging.INFO
-    format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    log_format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     node_name: str = 'nav2_mcp_server'
     tf_node_name: str = 'nav2_mcp_server_tf_node'
 
@@ -122,21 +122,21 @@ class Config:
         nav = self.navigation
 
         if nav.default_backup_speed <= 0:
-            raise ValueError("default_backup_speed must be positive")
+            raise ValueError('default_backup_speed must be positive')
 
         if nav.default_tf_timeout <= 0:
-            raise ValueError("default_tf_timeout must be positive")
+            raise ValueError('default_tf_timeout must be positive')
 
         if nav.max_waypoints <= 0:
-            raise ValueError("max_waypoints must be positive")
+            raise ValueError('max_waypoints must be positive')
 
         if nav.min_backup_distance >= nav.max_backup_distance:
             raise ValueError(
-                "min_backup_distance must be less than max_backup_distance")
+                'min_backup_distance must be less than max_backup_distance')
 
         if nav.min_backup_speed >= nav.max_backup_speed:
             raise ValueError(
-                "min_backup_speed must be less than max_backup_speed")
+                'min_backup_speed must be less than max_backup_speed')
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary.

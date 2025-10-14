@@ -1,0 +1,71 @@
+[pep8]
+max_line_length = 100
+# in-place = true
+# recursive = true
+aggressive = 3
+ignore = 
+# E101: indentation contains mixed spaces and tabs
+# E11: Fix indentation
+# E121: continuation line under-indented for hanging indent
+# E122: continuation line missing indentation or outdented
+# E123: closing bracket does not match indentation of opening bracket's line
+# E124: closing bracket does not match visual indentation
+# E125: continuation line with same indent as next logical line
+# E126: continuation line over-indented for hanging indent
+# E127: continuation line over-indented for visual indent
+# E128: continuation line under-indented for visual indent
+# E129: visually indented line with same indent as next logical line
+# E131: continuation line unaligned for hanging indent
+# E201: whitespace after '('
+# E202: whitespace before ')'
+# E203: whitespace before ':'
+# E211: whitespace before '('
+# E221: multiple spaces before operator
+# E222: multiple spaces after operator
+# E223: tab before operator
+# E224: tab after operator
+# E225: missing whitespace around operator
+# E226: missing whitespace around arithmetic operator
+# E227: missing whitespace around bitwise or shift operator
+# E228: missing whitespace around modulo operator
+# E231: missing whitespace after ','
+# E241: multiple spaces after ','
+# E242: tab after ','
+# E251: unexpected spaces around keyword / parameter equals
+# E252: missing whitespace around parameter equals
+# E26: Fix spacing after comment hash for inline comments
+# E265: block comment should start with '# '
+# E266: too many leading '#' for block comment
+# E27: Fix extraneous whitespace around keywords
+# E301: expected 1 blank line, found 0
+# E302: expected 2 blank lines, found 0
+# E303: too many blank lines
+# E304: blank lines found after function decorator
+# E305: expected 2 blank lines after end of function or class
+# E306: expected 1 blank line before a nested definition
+# E401: multiple imports on one line
+# E402: module level import not at top of file
+# E501: line too long
+# E502: the backslash is redundant between brackets
+# E701: multiple statements on one line (colon)
+# E702: multiple statements on one line (semicolon)
+# E703: statement ends with a semicolon
+# E704: multiple statements on one line (def)
+# E711: comparison to None should be 'if cond is None:'
+# E712: comparison to True should be 'if cond is True:' or 'if cond:'
+# E713: test for membership should be 'not in'
+# E714: test for object identity should be 'is not'
+# E721: do not compare types, use 'isinstance()'
+# E722: do not use bare except, specify exception instead
+# E731: do not assign a lambda expression, use a def
+# W291: trailing whitespace
+# W292: no newline at end of file
+# W293: blank line contains whitespace
+# W391: blank line at end of file
+# W503: line break before binary operator
+# W504: line break after binary operator
+# W601: .has_key() is deprecated, use 'in'
+# W602: deprecated form of raising exception
+# W603: '<>' is deprecated, use '!='
+# W604: backticks are deprecated, use 'repr()'
+select = E101,E11,E121,E122,E123,E124,E125,E126,E127,E128,E129,E131,E201,E202,E203,E211,E221,E222,E223,E224,E225,E226,E227,E228,E231,E241,E242,E251,E252,E26,E265,E266,E27,E301,E302,E303,E304,E305,E306,E401,E402,E501,E502,E701,E702,E703,E704,E711,E712,E713,E714,E721,E722,E731,W291,W292,W293,W391,W503,W504,W601,W602,W603,W604

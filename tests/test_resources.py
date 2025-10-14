@@ -99,7 +99,7 @@ class TestRobotPoseResource:
         """
         mock_tf_manager = Mock()
         mock_tf_manager.get_robot_pose.side_effect = Exception(
-            "Transform lookup failed"
+            'Transform lookup failed'
         )
 
         with patch('nav2_mcp_server.server.get_config') as mock_config:
@@ -166,7 +166,7 @@ class TestResourceErrorHandling:
                 with patch('nav2_mcp_server.tools.get_transform_manager'):
                     with patch(
                         'nav2_mcp_server.resources.get_transform_manager',
-                        side_effect=Exception("Manager unavailable")
+                        side_effect=Exception('Manager unavailable')
                     ):
                         server = create_server()
                         async with Client(server) as client:

@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 100
+inline-quotes = single
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .eggs,
+    *.egg-info,
+    .tox,
+    .venv,
+    venv
+ignore =
+    E203,
+    W503

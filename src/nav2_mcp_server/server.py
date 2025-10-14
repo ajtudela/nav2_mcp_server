@@ -26,11 +26,11 @@ import rclpy
 from fastmcp import FastMCP
 
 from .config import get_config
-from .utils import setup_logging
-from .tools import create_mcp_tools
-from .resources import create_mcp_resources
 from .navigation import get_navigation_manager
+from .resources import create_mcp_resources
+from .tools import create_mcp_tools
 from .transforms import get_transform_manager
+from .utils import setup_logging
 
 
 def create_server() -> FastMCP:
