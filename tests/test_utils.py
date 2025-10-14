@@ -20,7 +20,7 @@ from nav2_mcp_server.utils import (
 class TestMCPContextManager:
     """Tests for MCPContextManager class."""
 
-    def test_mcp_context_manager_init(self):
+    def test_mcp_context_manager_init(self) -> None:
         """Test MCPContextManager initialization.
 
         Verifies that MCPContextManager initializes properly
@@ -33,7 +33,7 @@ class TestMCPContextManager:
         assert hasattr(context_manager, 'warning')
         assert hasattr(context_manager, 'error')
 
-    def test_mcp_context_manager_info(self):
+    def test_mcp_context_manager_info(self) -> None:
         """Test MCPContextManager info method.
 
         Verifies that info messages are handled correctly.
@@ -43,7 +43,7 @@ class TestMCPContextManager:
         # Should not raise exception
         context_manager.info('Test info message')
 
-    def test_mcp_context_manager_warning(self):
+    def test_mcp_context_manager_warning(self) -> None:
         """Test MCPContextManager warning method.
 
         Verifies that warning messages are handled correctly.
@@ -53,7 +53,7 @@ class TestMCPContextManager:
         # Should not raise exception
         context_manager.warning('Test warning message')
 
-    def test_mcp_context_manager_error(self):
+    def test_mcp_context_manager_error(self) -> None:
         """Test MCPContextManager error method.
 
         Verifies that error messages are handled correctly.
@@ -63,7 +63,7 @@ class TestMCPContextManager:
         # Should not raise exception
         context_manager.error('Test error message')
 
-    def test_mcp_context_manager_with_real_context(self):
+    def test_mcp_context_manager_with_real_context(self) -> None:
         """Test MCPContextManager with real MCP Context.
 
         Verifies that MCPContextManager works with actual Context objects.
@@ -90,7 +90,7 @@ class TestLoggingSetup:
 
     @patch('nav2_mcp_server.utils.logging.basicConfig')
     @patch('nav2_mcp_server.utils.get_config')
-    def test_setup_logging_default(self, mock_get_config, mock_basic_config):
+    def test_setup_logging_default(self, mock_get_config, mock_basic_config) -> None:
         """Test logging setup with default configuration.
 
         Verifies that logging is configured with appropriate defaults.
@@ -108,7 +108,7 @@ class TestLoggingSetup:
 
     @patch('nav2_mcp_server.utils.logging.basicConfig')
     @patch('nav2_mcp_server.utils.get_config')
-    def test_setup_logging_debug_level(self, mock_get_config, mock_basic_config):
+    def test_setup_logging_debug_level(self, mock_get_config, mock_basic_config) -> None:
         """Test logging setup with debug level.
 
         Verifies that debug logging level is correctly configured.
@@ -126,7 +126,7 @@ class TestLoggingSetup:
 
     @patch('nav2_mcp_server.utils.logging.getLogger')
     @patch('nav2_mcp_server.utils.get_config')
-    def test_setup_logging_returns_logger(self, mock_get_config, mock_get_logger):
+    def test_setup_logging_returns_logger(self, mock_get_config, mock_get_logger) -> None:
         """Test that setup_logging returns a logger instance.
 
         Verifies that the function returns a proper logger object.
@@ -148,7 +148,7 @@ class TestLoggingSetup:
 class TestSafeJSONDumps:
     """Tests for safe JSON serialization."""
 
-    def test_safe_json_dumps_simple_dict(self):
+    def test_safe_json_dumps_simple_dict(self) -> None:
         """Test JSON serialization of simple dictionary.
 
         Verifies that simple dictionaries are correctly serialized.
@@ -165,7 +165,7 @@ class TestSafeJSONDumps:
         parsed = json.loads(result)
         assert parsed == test_data
 
-    def test_safe_json_dumps_nested_dict(self):
+    def test_safe_json_dumps_nested_dict(self) -> None:
         """Test JSON serialization of nested dictionary.
 
         Verifies that nested data structures are correctly serialized.
@@ -185,7 +185,7 @@ class TestSafeJSONDumps:
         parsed = json.loads(result)
         assert parsed == test_data
 
-    def test_safe_json_dumps_with_none_values(self):
+    def test_safe_json_dumps_with_none_values(self) -> None:
         """Test JSON serialization with None values.
 
         Verifies that None values are handled correctly.
@@ -201,7 +201,7 @@ class TestSafeJSONDumps:
         parsed = json.loads(result)
         assert parsed == test_data
 
-    def test_safe_json_dumps_error_handling(self):
+    def test_safe_json_dumps_error_handling(self) -> None:
         """Test JSON serialization error handling.
 
         Verifies that non-serializable objects are handled gracefully.
@@ -222,7 +222,7 @@ class TestSafeJSONDumps:
         parsed = json.loads(result)
         assert 'error' in parsed or 'good' in parsed
 
-    def test_safe_json_dumps_with_formatting(self):
+    def test_safe_json_dumps_with_formatting(self) -> None:
         """Test JSON serialization with formatting options.
 
         Verifies that JSON formatting options work correctly.
@@ -240,7 +240,7 @@ class TestSafeJSONDumps:
 class TestWithContextLogging:
     """Tests for context logging decorator."""
 
-    def test_with_context_logging_decorator(self):
+    def test_with_context_logging_decorator(self) -> None:
         """Test context logging decorator functionality.
 
         Verifies that the decorator properly wraps functions
@@ -248,7 +248,7 @@ class TestWithContextLogging:
         """
         # Mock function to decorate
         @with_context_logging('Test operation')
-        def test_function(context_manager):
+        def test_function(context_manager) -> None:
             return 'success'
 
         context_manager = MCPContextManager()
@@ -260,7 +260,7 @@ class TestWithContextLogging:
             # Should have called info at least once
             assert mock_info.call_count >= 1
 
-    def test_with_context_logging_with_exception(self):
+    def test_with_context_logging_with_exception(self) -> None:
         """Test context logging decorator with exception.
 
         Verifies that exceptions are properly logged and re-raised.
@@ -278,7 +278,7 @@ class TestWithContextLogging:
             # Should have logged the error
             mock_error.assert_called_once()
 
-    def test_with_context_logging_async_function(self):
+    def test_with_context_logging_async_function(self) -> None:
         """Test context logging decorator with async function.
 
         Verifies that the decorator works with async functions.
@@ -289,7 +289,7 @@ class TestWithContextLogging:
 
         context_manager = MCPContextManager()
 
-        with patch.object(context_manager, 'info') as mock_info:
+        with patch.object(context_manager, 'info'):
             # Note: This would need to be run with asyncio in a real test
             # For this mock test, we just verify the decorator can be applied
             assert callable(async_test_function)
@@ -298,7 +298,7 @@ class TestWithContextLogging:
 class TestUtilityFunctions:
     """Tests for miscellaneous utility functions."""
 
-    def test_utility_functions_exist(self):
+    def test_utility_functions_exist(self) -> None:
         """Test that expected utility functions exist.
 
         Verifies that the module provides expected utility functions.
@@ -311,7 +311,7 @@ class TestUtilityFunctions:
         assert hasattr(utils, 'safe_json_dumps')
         assert hasattr(utils, 'with_context_logging')
 
-    def test_import_structure(self):
+    def test_import_structure(self) -> None:
         """Test import structure of utils module.
 
         Verifies that the utils module can be imported correctly.
@@ -326,7 +326,7 @@ class TestUtilityFunctions:
 class TestErrorHandling:
     """Tests for error handling in utility functions."""
 
-    def test_mcp_context_manager_with_broken_context(self):
+    def test_mcp_context_manager_with_broken_context(self) -> None:
         """Test MCPContextManager with broken context object.
 
         Verifies that broken context objects are handled gracefully.
@@ -344,7 +344,7 @@ class TestErrorHandling:
         context_manager.warning('Warning message')
         context_manager.error('Error message')
 
-    def test_safe_json_dumps_circular_reference(self):
+    def test_safe_json_dumps_circular_reference(self) -> None:
         """Test JSON serialization with circular reference.
 
         Verifies that circular references are handled gracefully.

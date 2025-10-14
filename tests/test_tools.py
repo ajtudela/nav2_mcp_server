@@ -20,7 +20,7 @@ class TestNavigateToPose:
         self,
         mock_navigation_manager: Mock,
         sample_pose: Dict[str, Any]
-    ):
+    ) -> None:
         """Test successful navigation to pose.
 
         Verifies that the tool correctly initiates navigation
@@ -51,7 +51,7 @@ class TestNavigateToPose:
                             mock_navigation_manager.navigate_to_pose\
                                 .assert_called_once()
 
-    async def test_navigate_to_pose_invalid_coordinates(self):
+    async def test_navigate_to_pose_invalid_coordinates(self) -> None:
         """Test navigation with invalid coordinates.
 
         Verifies that the tool handles invalid coordinate inputs gracefully.
@@ -83,14 +83,14 @@ class TestFollowWaypoints:
         self,
         mock_navigation_manager: Mock,
         sample_waypoints: List[Dict[str, Any]]
-    ):
+    ) -> None:
         """Test successful waypoint following.
 
         Verifies that the tool correctly initiates waypoint following
         when provided with valid waypoint data.
         """
         waypoints_str = str(sample_waypoints)
-        
+
         with patch('nav2_mcp_server.server.get_config'):
             with patch(
                 'nav2_mcp_server.tools.get_navigation_manager',
@@ -111,7 +111,7 @@ class TestFollowWaypoints:
                             mock_navigation_manager.follow_waypoints\
                                 .assert_called_once()
 
-    async def test_follow_waypoints_empty_list(self):
+    async def test_follow_waypoints_empty_list(self) -> None:
         """Test waypoint following with empty waypoint list.
 
         Verifies that the tool handles empty waypoint inputs appropriately.
@@ -128,7 +128,7 @@ class TestFollowWaypoints:
                                 'follow_waypoints',
                                 {'waypoints': '[]'}
                             )
-                            
+
                             # Should handle empty waypoints gracefully
                             assert result.content
 
@@ -139,7 +139,7 @@ class TestSpinRobot:
     async def test_spin_robot_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot spinning.
 
         Verifies that the tool correctly initiates robot spinning
@@ -165,7 +165,7 @@ class TestSpinRobot:
                             mock_navigation_manager.spin_robot\
                                 .assert_called_once()
 
-    async def test_spin_robot_invalid_angle(self):
+    async def test_spin_robot_invalid_angle(self) -> None:
         """Test robot spinning with invalid angle.
 
         Verifies that the tool handles invalid angular distance inputs.
@@ -191,7 +191,7 @@ class TestBackupRobot:
     async def test_backup_robot_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot backup.
 
         Verifies that the tool correctly initiates robot backup
@@ -227,7 +227,7 @@ class TestDockRobot:
     async def test_dock_robot_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot docking.
 
         Verifies that the tool correctly initiates robot docking
@@ -259,7 +259,7 @@ class TestUndockRobot:
     async def test_undock_robot_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot undocking.
 
         Verifies that the tool correctly initiates robot undocking.
@@ -291,14 +291,14 @@ class TestGetPath:
         self,
         mock_navigation_manager: Mock,
         sample_path: Dict[str, Any]
-    ):
+    ) -> None:
         """Test successful path planning.
 
         Verifies that the tool correctly computes a path between
         start and goal poses.
         """
         mock_navigation_manager.get_path.return_value = sample_path
-        
+
         with patch('nav2_mcp_server.server.get_config'):
             with patch(
                 'nav2_mcp_server.tools.get_navigation_manager',
@@ -334,14 +334,14 @@ class TestGetPathFromRobot:
         self,
         mock_navigation_manager: Mock,
         sample_path: Dict[str, Any]
-    ):
+    ) -> None:
         """Test successful path planning from robot position.
 
         Verifies that the tool correctly computes a path from
         the current robot position to a goal.
         """
         mock_navigation_manager.get_path_from_robot.return_value = sample_path
-        
+
         with patch('nav2_mcp_server.server.get_config'):
             with patch(
                 'nav2_mcp_server.tools.get_navigation_manager',
@@ -373,7 +373,7 @@ class TestClearCostmaps:
     async def test_clear_costmaps_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful costmap clearing.
 
         Verifies that the tool correctly clears the costmaps.
@@ -404,7 +404,7 @@ class TestGetRobotPose:
     async def test_get_robot_pose_success(
         self,
         mock_transform_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot pose retrieval.
 
         Verifies that the tool correctly retrieves the current robot pose.
@@ -435,7 +435,7 @@ class TestCancelNavigation:
     async def test_cancel_navigation_success(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful navigation cancellation.
 
         Verifies that the tool correctly cancels ongoing navigation.
@@ -467,7 +467,7 @@ class TestNav2Lifecycle:
         self,
         mock_navigation_manager: Mock,
         lifecycle_nodes: List[str]
-    ):
+    ) -> None:
         """Test successful Nav2 lifecycle startup.
 
         Verifies that the tool correctly manages Nav2 node lifecycle.
@@ -494,7 +494,7 @@ class TestNav2Lifecycle:
     async def test_nav2_lifecycle_shutdown(
         self,
         mock_navigation_manager: Mock
-    ):
+    ) -> None:
         """Test successful Nav2 lifecycle shutdown.
 
         Verifies that the tool correctly shuts down Nav2 nodes.
@@ -522,7 +522,7 @@ class TestNav2Lifecycle:
 class TestToolErrorHandling:
     """Tests for error handling across all tools."""
 
-    async def test_navigation_manager_exception(self):
+    async def test_navigation_manager_exception(self) -> None:
         """Test tool behavior when NavigationManager raises exception.
 
         Verifies that tools handle NavigationManager exceptions gracefully.
@@ -531,7 +531,7 @@ class TestToolErrorHandling:
         mock_nav_manager.navigate_to_pose.side_effect = Exception(
             'Navigation system unavailable'
         )
-        
+
         with patch('nav2_mcp_server.server.get_config'):
             with patch(
                 'nav2_mcp_server.tools.get_navigation_manager',
@@ -553,12 +553,12 @@ class TestToolErrorHandling:
                                     'frame_id': 'map'
                                 }
                             )
-                            
+
                             # Result should contain error information
                             assert result.content
                             assert 'error' in str(result.content).lower()
 
-    async def test_transform_manager_exception(self):
+    async def test_transform_manager_exception(self) -> None:
         """Test tool behavior when TransformManager raises exception.
 
         Verifies that tools handle TransformManager exceptions gracefully.
@@ -567,7 +567,7 @@ class TestToolErrorHandling:
         mock_tf_manager.get_robot_pose.side_effect = Exception(
             'Transform lookup failed'
         )
-        
+
         with patch('nav2_mcp_server.server.get_config'):
             with patch('nav2_mcp_server.tools.get_navigation_manager'):
                 with patch(
@@ -584,7 +584,7 @@ class TestToolErrorHandling:
                                 'get_robot_pose',
                                 {}
                             )
-                            
+
                             # Result should contain error information
                             assert result.content
                             assert 'error' in str(result.content).lower()

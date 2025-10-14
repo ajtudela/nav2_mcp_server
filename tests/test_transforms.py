@@ -21,7 +21,7 @@ class TestTransformManagerInitialization:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_transform_manager_init(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test TransformManager initialization.
 
         Verifies that the TransformManager properly initializes
@@ -41,7 +41,7 @@ class TestTransformManagerInitialization:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_transform_manager_tf_setup(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test TransformManager TF setup.
 
         Verifies that TF2 buffer and listener are properly configured.
@@ -66,7 +66,7 @@ class TestGetRobotPose:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_get_robot_pose_success(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test successful robot pose retrieval.
 
         Verifies that robot pose is correctly retrieved from TF2.
@@ -107,7 +107,7 @@ class TestGetRobotPose:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_get_robot_pose_transform_failure(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test robot pose retrieval with transform failure.
 
         Verifies that transform lookup failures are handled gracefully.
@@ -136,7 +136,7 @@ class TestGetRobotPose:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_get_robot_pose_with_custom_frames(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test robot pose retrieval with custom frame names.
 
         Verifies that custom target and source frames work correctly.
@@ -165,7 +165,7 @@ class TestGetRobotPose:
         context_manager = MCPContextManager()
 
         result = tf_manager.get_robot_pose(
-            context_manager, 
+            context_manager,
             target_frame='odom',
             source_frame='robot_base'
         )
@@ -183,7 +183,7 @@ class TestPoseExtraction:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_extract_pose_from_transform(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test pose extraction from transform message.
 
         Verifies that transform messages are correctly converted
@@ -220,7 +220,7 @@ class TestQuaternionOperations:
     """Tests for quaternion operations."""
 
     @patch('nav2_mcp_server.transforms.rclpy.create_node')
-    def test_quaternion_to_yaw_conversion(self, mock_create_node):
+    def test_quaternion_to_yaw_conversion(self, mock_create_node: Mock) -> None:
         """Test quaternion to yaw angle conversion.
 
         Verifies that quaternions are correctly converted to yaw angles.
@@ -237,14 +237,14 @@ class TestQuaternionOperations:
 
         # 90 degrees rotation
         yaw_90 = tf_manager._quaternion_to_yaw(0.0, 0.0, 0.707, 0.707)
-        assert abs(yaw_90 - math.pi/2) < 0.01
+        assert abs(yaw_90 - math.pi / 2) < 0.01
 
         # 180 degrees rotation
         yaw_180 = tf_manager._quaternion_to_yaw(0.0, 0.0, 1.0, 0.0)
         assert abs(abs(yaw_180) - math.pi) < 0.01
 
     @patch('nav2_mcp_server.transforms.rclpy.create_node')
-    def test_yaw_to_quaternion_conversion(self, mock_create_node):
+    def test_yaw_to_quaternion_conversion(self, mock_create_node: Mock) -> None:
         """Test yaw angle to quaternion conversion.
 
         Verifies that yaw angles are correctly converted to quaternions.
@@ -261,7 +261,7 @@ class TestQuaternionOperations:
         assert abs(quat_0['z']) < 0.001
 
         # 90 degrees
-        quat_90 = tf_manager.yaw_to_quaternion(math.pi/2)
+        quat_90 = tf_manager.yaw_to_quaternion(math.pi / 2)
         assert abs(quat_90['z'] - 0.707) < 0.01
         assert abs(quat_90['w'] - 0.707) < 0.01
 
@@ -271,7 +271,7 @@ class TestQuaternionOperations:
         assert abs(abs(quat_180['z']) - 1.0) < 0.01
 
     @patch('nav2_mcp_server.transforms.rclpy.create_node')
-    def test_yaw_quaternion_roundtrip(self, mock_create_node):
+    def test_yaw_quaternion_roundtrip(self, mock_create_node: Mock) -> None:
         """Test yaw-quaternion-yaw conversion roundtrip.
 
         Verifies that converting yaw to quaternion and back
@@ -282,7 +282,7 @@ class TestQuaternionOperations:
 
         tf_manager = TransformManager()
 
-        test_angles = [0.0, math.pi/4, math.pi/2, math.pi, -math.pi/2]
+        test_angles = [0.0, math.pi / 4, math.pi / 2, math.pi, -math.pi / 2]
 
         for original_yaw in test_angles:
             # Convert to quaternion and back
@@ -307,7 +307,7 @@ class TestTransformManagerDestroy:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_transform_manager_destroy(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test TransformManager cleanup.
 
         Verifies that the TransformManager properly cleans up
@@ -331,7 +331,7 @@ class TestTransformManagerErrorHandling:
     @patch('nav2_mcp_server.transforms.TransformListener')
     def test_get_robot_pose_timeout_error(
         self, mock_listener, mock_buffer, mock_create_node
-    ):
+    ) -> None:
         """Test robot pose retrieval with timeout error.
 
         Verifies that timeout errors are handled appropriately.
@@ -357,7 +357,7 @@ class TestTransformManagerErrorHandling:
         assert 'timeout' in result['message'].lower()
 
     @patch('nav2_mcp_server.transforms.rclpy.create_node')
-    def test_transform_manager_init_failure(self, mock_create_node):
+    def test_transform_manager_init_failure(self, mock_create_node: Mock) -> None:
         """Test TransformManager initialization failure.
 
         Verifies that initialization failures are handled gracefully.

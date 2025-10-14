@@ -17,7 +17,7 @@ class TestRobotPoseResource:
     async def test_robot_pose_resource_success(
         self,
         mock_transform_manager: Mock
-    ):
+    ) -> None:
         """Test successful robot pose resource retrieval.
 
         Verifies that the resource endpoint correctly returns
@@ -48,7 +48,7 @@ class TestRobotPoseResource:
     async def test_robot_pose_resource_content(
         self,
         mock_transform_manager: Mock
-    ):
+    ) -> None:
         """Test robot pose resource returns correct content.
 
         Verifies that the resource content matches expected
@@ -91,7 +91,7 @@ class TestRobotPoseResource:
                             assert 'pose' in parsed_content
                             assert 'status' in parsed_content
 
-    async def test_robot_pose_resource_error_handling(self):
+    async def test_robot_pose_resource_error_handling(self) -> None:
         """Test robot pose resource handles errors gracefully.
 
         Verifies that the resource returns error information
@@ -124,7 +124,7 @@ class TestRobotPoseResource:
                             assert 'error' in parsed_content
                             assert 'message' in parsed_content
 
-    async def test_robot_pose_resource_mime_type(self):
+    async def test_robot_pose_resource_mime_type(self) -> None:
         """Test robot pose resource has correct MIME type.
 
         Verifies that the resource is properly configured
@@ -155,7 +155,7 @@ class TestRobotPoseResource:
 class TestResourceErrorHandling:
     """Tests for resource error handling scenarios."""
 
-    async def test_resource_with_manager_unavailable(self):
+    async def test_resource_with_manager_unavailable(self) -> None:
         """Test resource behavior when manager is unavailable.
 
         Verifies that resources handle manager initialization
@@ -174,7 +174,7 @@ class TestResourceErrorHandling:
                             resources = await client.list_resources()
                             assert isinstance(resources, list)
 
-    async def test_resource_json_serialization(self):
+    async def test_resource_json_serialization(self) -> None:
         """Test resource handles complex data serialization.
 
         Verifies that the resource can handle various data types

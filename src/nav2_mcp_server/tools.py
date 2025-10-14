@@ -163,7 +163,7 @@ def create_mcp_tools(mcp: FastMCP) -> None:
         speed: Annotated[
             float,
             'Backup speed in m/s (typically 0.1-0.5)'
-        ] = None,
+        ] = 0.0,
         ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
     ) -> str:
         """Move the robot backward in a straight line."""
@@ -195,8 +195,8 @@ def create_mcp_tools(mcp: FastMCP) -> None:
         },
     )
     async def dock_robot(
-        x: Annotated[float, 'X coordinate of dock in map frame'] = None,
-        y: Annotated[float, 'Y coordinate of dock in map frame'] = None,
+        x: Annotated[float, 'X coordinate of dock in map frame'],
+        y: Annotated[float, 'Y coordinate of dock in map frame'],
         yaw: Annotated[
             float, 'Orientation at dock in radians (0 = facing east)'
         ] = 0.0,

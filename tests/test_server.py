@@ -4,14 +4,14 @@ This module tests the server initialization, tool registration,
 and basic server functionality.
 """
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastmcp import Client
 
 from nav2_mcp_server.server import create_server
 
 
-async def test_server_initialization():
+async def test_server_initialization() -> None:
     """Test that the server initializes correctly.
 
     Verifies that the FastMCP server instance is created with
@@ -25,7 +25,7 @@ async def test_server_initialization():
         assert server is not None
 
 
-async def test_server_has_tools():
+async def test_server_has_tools() -> None:
     """Test that the server has tools registered.
 
     Verifies that tools are properly registered during server
@@ -41,7 +41,7 @@ async def test_server_has_tools():
                 )
 
 
-async def test_server_tool_names():
+async def test_server_tool_names() -> None:
     """Test that expected tools are registered with correct names.
 
     Verifies that all core navigation tools are present in the server.
@@ -83,7 +83,7 @@ async def test_server_tool_names():
                     )
 
 
-async def test_server_has_resources():
+async def test_server_has_resources() -> None:
     """Test that the server has resources registered.
 
     Verifies that resources are properly registered during server
@@ -98,7 +98,7 @@ async def test_server_has_resources():
             )
 
 
-async def test_server_client_connection():
+async def test_server_client_connection() -> None:
     """Test that a client can connect to the server.
 
     Verifies that the in-memory transport works correctly and
@@ -117,7 +117,7 @@ async def test_server_client_connection():
                         )
 
 
-async def test_server_list_tools_via_client():
+async def test_server_list_tools_via_client() -> None:
     """Test that tools can be listed through a client connection.
 
     Verifies that the MCP protocol correctly exposes available tools.
@@ -134,7 +134,7 @@ async def test_server_list_tools_via_client():
                         )
 
 
-async def test_server_list_resources_via_client():
+async def test_server_list_resources_via_client() -> None:
     """Test that resources can be listed through a client connection.
 
     Verifies that the MCP protocol correctly exposes available resources.

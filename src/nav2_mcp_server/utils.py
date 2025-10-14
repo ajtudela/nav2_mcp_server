@@ -130,7 +130,7 @@ def setup_logging() -> logging.Logger:
     config = get_config()
     logging.basicConfig(
         level=config.logging.level,
-        format=config.logging.format
+        format=config.logging.log_format
     )
     return logging.getLogger(config.logging.node_name)
 
@@ -149,7 +149,7 @@ def with_context_logging(func: F) -> F:
         Decorated function with context logging.
     """
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         # Extract context from kwargs if present
         ctx = kwargs.get('ctx')
         context_manager = MCPContextManager(ctx)
@@ -186,7 +186,7 @@ def with_nav2_active_check(func: F) -> F:
         Decorated function with Nav2 active check.
     """
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         from .navigation import get_navigator
 
         navigator = get_navigator()

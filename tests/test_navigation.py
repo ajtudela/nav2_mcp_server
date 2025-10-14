@@ -17,7 +17,7 @@ class TestNavigationManagerInitialization:
     """Tests for NavigationManager initialization."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_navigation_manager_init(self, mock_navigator_class):
+    def test_navigation_manager_init(self, mock_navigator_class: Mock) -> None:
         """Test NavigationManager initialization.
 
         Verifies that the NavigationManager properly initializes
@@ -32,7 +32,7 @@ class TestNavigationManagerInitialization:
         mock_navigator_class.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_navigation_manager_navigator_property(self, mock_navigator_class):
+    def test_navigation_manager_navigator_property(self, mock_navigator_class: Mock) -> None:
         """Test NavigationManager navigator property.
 
         Verifies that the navigator property returns the correct
@@ -51,7 +51,7 @@ class TestCreatePoseStamped:
     """Tests for pose creation utilities."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_create_pose_stamped_success(self, mock_navigator_class):
+    def test_create_pose_stamped_success(self, mock_navigator_class: Mock) -> None:
         """Test successful PoseStamped creation.
 
         Verifies that create_pose_stamped correctly constructs
@@ -72,7 +72,7 @@ class TestCreatePoseStamped:
             mock_pose.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_create_pose_stamped_with_quaternion(self, mock_navigator_class):
+    def test_create_pose_stamped_with_quaternion(self, mock_navigator_class: Mock) -> None:
         """Test PoseStamped creation with quaternion conversion.
 
         Verifies that yaw angles are correctly converted to quaternions.
@@ -95,7 +95,7 @@ class TestParseWaypoints:
     """Tests for waypoint parsing functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_parse_waypoints_success(self, mock_navigator_class):
+    def test_parse_waypoints_success(self, mock_navigator_class: Mock) -> None:
         """Test successful waypoint parsing.
 
         Verifies that waypoint strings are correctly parsed
@@ -104,7 +104,8 @@ class TestParseWaypoints:
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        waypoints_str = '[{"position": {"x": 1.0, "y": 2.0, "z": 0.0}, "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}}]'
+        waypoints_str = '[{"position": {"x": 1.0, "y": 2.0, "z": 0.0},'
+        '"orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}}]'
 
         with patch.object(nav_manager, 'create_pose_stamped') as mock_create:
             mock_pose = Mock()
@@ -117,7 +118,7 @@ class TestParseWaypoints:
             mock_create.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_parse_waypoints_invalid_json(self, mock_navigator_class):
+    def test_parse_waypoints_invalid_json(self, mock_navigator_class: Mock) -> None:
         """Test waypoint parsing with invalid JSON.
 
         Verifies that invalid JSON input is handled gracefully.
@@ -129,7 +130,7 @@ class TestParseWaypoints:
             nav_manager.parse_waypoints('invalid json', context_manager)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_parse_waypoints_empty_list(self, mock_navigator_class):
+    def test_parse_waypoints_empty_list(self, mock_navigator_class: Mock) -> None:
         """Test waypoint parsing with empty list.
 
         Verifies that empty waypoint lists are handled correctly.
@@ -146,7 +147,7 @@ class TestNavigateToPose:
     """Tests for navigate_to_pose functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_navigate_to_pose_success(self, mock_navigator_class):
+    def test_navigate_to_pose_success(self, mock_navigator_class: Mock) -> None:
         """Test successful navigation to pose.
 
         Verifies that navigate_to_pose correctly initiates navigation
@@ -170,7 +171,7 @@ class TestNavigateToPose:
             mock_navigator.goToPose.assert_called_once_with(mock_pose)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_navigate_to_pose_failure(self, mock_navigator_class):
+    def test_navigate_to_pose_failure(self, mock_navigator_class: Mock) -> None:
         """Test navigation failure handling.
 
         Verifies that navigation failures are properly handled
@@ -195,7 +196,7 @@ class TestFollowWaypoints:
     """Tests for follow_waypoints functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_follow_waypoints_success(self, mock_navigator_class):
+    def test_follow_waypoints_success(self, mock_navigator_class: Mock) -> None:
         """Test successful waypoint following.
 
         Verifies that waypoint following is correctly initiated
@@ -219,7 +220,7 @@ class TestFollowWaypoints:
             mock_navigator.followWaypoints.assert_called_once_with(mock_waypoints)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_follow_waypoints_empty(self, mock_navigator_class):
+    def test_follow_waypoints_empty(self, mock_navigator_class: Mock) -> None:
         """Test waypoint following with empty waypoints.
 
         Verifies that empty waypoint lists are handled appropriately.
@@ -239,7 +240,7 @@ class TestSpinRobot:
     """Tests for robot spinning functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_spin_robot_success(self, mock_navigator_class):
+    def test_spin_robot_success(self, mock_navigator_class: Mock) -> None:
         """Test successful robot spinning.
 
         Verifies that spin operation is correctly initiated
@@ -257,7 +258,7 @@ class TestSpinRobot:
         mock_navigator.spin.assert_called_once_with(1.57)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_spin_robot_failure(self, mock_navigator_class):
+    def test_spin_robot_failure(self, mock_navigator_class: Mock) -> None:
         """Test spin operation failure handling.
 
         Verifies that spin operation failures are handled gracefully.
@@ -278,7 +279,7 @@ class TestBackupRobot:
     """Tests for robot backup functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_backup_robot_success(self, mock_navigator_class):
+    def test_backup_robot_success(self, mock_navigator_class: Mock) -> None:
         """Test successful robot backup.
 
         Verifies that backup operation is correctly initiated
@@ -296,7 +297,7 @@ class TestBackupRobot:
         mock_navigator.backup.assert_called_once_with(1.0, 0.15)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_backup_robot_with_defaults(self, mock_navigator_class):
+    def test_backup_robot_with_defaults(self, mock_navigator_class: Mock) -> None:
         """Test robot backup with default parameters.
 
         Verifies that default backup parameters are correctly applied.
@@ -319,7 +320,7 @@ class TestClearCostmaps:
     """Tests for costmap clearing functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_clear_costmaps_success(self, mock_navigator_class):
+    def test_clear_costmaps_success(self, mock_navigator_class: Mock) -> None:
         """Test successful costmap clearing.
 
         Verifies that costmap clearing operations work correctly.
@@ -336,7 +337,7 @@ class TestClearCostmaps:
         mock_navigator.clearAllCostmaps.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_clear_costmaps_failure(self, mock_navigator_class):
+    def test_clear_costmaps_failure(self, mock_navigator_class: Mock) -> None:
         """Test costmap clearing failure handling.
 
         Verifies that costmap clearing failures are handled properly.
@@ -357,7 +358,7 @@ class TestCancelNavigation:
     """Tests for navigation cancellation functionality."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_cancel_navigation_success(self, mock_navigator_class):
+    def test_cancel_navigation_success(self, mock_navigator_class: Mock) -> None:
         """Test successful navigation cancellation.
 
         Verifies that ongoing navigation can be successfully cancelled.
@@ -374,7 +375,7 @@ class TestCancelNavigation:
         mock_navigator.cancelTask.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_cancel_navigation_failure(self, mock_navigator_class):
+    def test_cancel_navigation_failure(self, mock_navigator_class: Mock) -> None:
         """Test navigation cancellation failure handling.
 
         Verifies that cancellation failures are handled gracefully.
@@ -395,7 +396,7 @@ class TestNavigationManagerUtilities:
     """Tests for NavigationManager utility methods."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_yaw_to_quaternion_conversion(self, mock_navigator_class):
+    def test_yaw_to_quaternion_conversion(self, mock_navigator_class: Mock) -> None:
         """Test yaw to quaternion conversion utility.
 
         Verifies that yaw angles are correctly converted to quaternions.

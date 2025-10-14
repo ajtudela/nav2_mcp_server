@@ -34,7 +34,7 @@ from .utils import MCPContextManager, validate_numeric_range
 class NavigationManager:
     """Manages Nav2 navigation operations and state."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the navigation manager."""
         self._navigator: Optional[BasicNavigator] = None
         self.config = get_config()
@@ -530,7 +530,7 @@ class NavigationManager:
         dock_id: str = '',
         dock_type: str = '',
         nav_to_dock: bool = True,
-        context_manager: MCPContextManager = None
+        context_manager: Optional[MCPContextManager] = None
     ) -> str:
         """Dock the robot to a charging station or dock.
 
@@ -568,11 +568,12 @@ class NavigationManager:
                 f'Docking robot at pose: x={dock_pose.pose.position.x:.2f}, '
                 f'y={dock_pose.pose.position.y:.2f}'
             )
-            context_manager.info_sync(
-                f'Starting dock operation at pose '
-                f'({dock_pose.pose.position.x:.2f},\n'
-                f' {dock_pose.pose.position.y:.2f})'
-            )
+            if context_manager:
+                context_manager.info_sync(
+                    f'Starting dock operation at pose '
+                    f'({dock_pose.pose.position.x:.2f},\n'
+                    f' {dock_pose.pose.position.y:.2f})'
+                )
 
             self.navigator.dockRobotByPose(dock_pose, dock_type, nav_to_dock)
             dock_description = (
@@ -583,8 +584,9 @@ class NavigationManager:
             # Dock using ID
             self.navigator.get_logger().info(
                 f'Docking robot at dock ID: {dock_id}')
-            context_manager.info_sync(
-                f'Starting dock operation at dock ID: {dock_id}')
+            if context_manager:
+                context_manager.info_sync(
+                    f'Starting dock operation at dock ID: {dock_id}')
 
             self.navigator.dockRobotByID(dock_id, nav_to_dock)
             dock_description = f'dock ID: {dock_id}'
@@ -600,7 +602,7 @@ class NavigationManager:
     def undock_robot(
         self,
         dock_type: str = '',
-        context_manager: MCPContextManager = None
+        context_manager: Optional[MCPContextManager] = None
     ) -> str:
         """Undock the robot from a charging station or dock.
 
@@ -622,7 +624,8 @@ class NavigationManager:
             If undocking operation fails.
         """
         self.navigator.get_logger().info('Undocking robot from dock')
-        context_manager.info_sync('Starting undock operation')
+        if context_manager:
+            context_manager.info_sync('Starting undock operation')
 
         self.navigator.undockRobot(dock_type)
         self._monitor_navigation_progress(context_manager, 'undock operation')

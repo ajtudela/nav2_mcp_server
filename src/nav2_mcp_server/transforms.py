@@ -33,7 +33,7 @@ from .utils import MCPContextManager, safe_json_dumps
 class TransformManager:
     """Manages TF transforms and robot pose operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the transform manager."""
         self.config = get_config()
         self._node: Optional[Node] = None
@@ -142,7 +142,7 @@ class TransformManager:
                 }
             )
 
-    def _extract_pose_from_transform(self, transform) -> Dict[str, Any]:
+    def _extract_pose_from_transform(self, transform: Any) -> Dict[str, Any]:
         """Extract pose information from transform.
 
         Parameters
