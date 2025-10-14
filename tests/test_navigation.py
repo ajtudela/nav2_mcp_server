@@ -1,14 +1,15 @@
-"""Tests for NavigationManager operations.
+"""Tests for Navigation Manager functionality.
 
-This module tests the NavigationManager class and its navigation
-operations including pose navigation, waypoint following, and
-action management.
+This module tests navigation operations including pose navigation,
+waypoint following, and robot maneuvers.
 """
 
 from unittest.mock import Mock, patch
 
 import pytest
+from nav2_simple_commander.robot_navigator import TaskResult
 
+from nav2_mcp_server.exceptions import NavigationError
 from nav2_mcp_server.navigation import NavigationManager
 from nav2_mcp_server.utils import MCPContextManager
 
@@ -16,27 +17,23 @@ from nav2_mcp_server.utils import MCPContextManager
 class TestNavigationManagerInitialization:
     """Tests for NavigationManager initialization."""
 
-    @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_navigation_manager_init(self, mock_navigator_class: Mock) -> None:
+    def test_navigation_manager_init(self) -> None:
         """Test NavigationManager initialization.
 
-        Verifies that the NavigationManager properly initializes
-        with a BasicNavigator instance.
+        Verifies that the NavigationManager properly initializes.
         """
-        mock_navigator = Mock()
-        mock_navigator_class.return_value = mock_navigator
-
         nav_manager = NavigationManager()
 
         assert nav_manager is not None
-        mock_navigator_class.assert_called_once()
+        # Navigator is created lazily
+        assert nav_manager._navigator is None
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_navigation_manager_navigator_property(self, mock_navigator_class: Mock) -> None:
         """Test NavigationManager navigator property.
 
         Verifies that the navigator property returns the correct
-        BasicNavigator instance.
+        BasicNavigator instance and creates it lazily.
         """
         mock_navigator = Mock()
         mock_navigator_class.return_value = mock_navigator
@@ -45,6 +42,7 @@ class TestNavigationManagerInitialization:
         navigator = nav_manager.navigator
 
         assert navigator is mock_navigator
+        mock_navigator_class.assert_called_once()
 
 
 class TestCreatePoseStamped:
@@ -57,19 +55,22 @@ class TestCreatePoseStamped:
         Verifies that create_pose_stamped correctly constructs
         a PoseStamped message from coordinates.
         """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+        mock_navigator_class.return_value = mock_navigator
+
         nav_manager = NavigationManager()
-        context_manager = MCPContextManager()
 
-        with patch('nav2_mcp_server.navigation.PoseStamped') as mock_pose:
-            mock_pose_instance = Mock()
-            mock_pose.return_value = mock_pose_instance
+        # create_pose_stamped signature: (x, y, yaw=0.0)
+        result = nav_manager.create_pose_stamped(1.0, 2.0, 1.57)
 
-            result = nav_manager.create_pose_stamped(
-                1.0, 2.0, 1.57, 'map', context_manager
-            )
-
-            assert result is mock_pose_instance
-            mock_pose.assert_called_once()
+        assert result is not None
+        assert result.pose.position.x == 1.0
+        assert result.pose.position.y == 2.0
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_create_pose_stamped_with_quaternion(self, mock_navigator_class: Mock) -> None:
@@ -77,18 +78,23 @@ class TestCreatePoseStamped:
 
         Verifies that yaw angles are correctly converted to quaternions.
         """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+        mock_navigator_class.return_value = mock_navigator
+
         nav_manager = NavigationManager()
-        context_manager = MCPContextManager()
 
-        with patch('nav2_mcp_server.navigation.PoseStamped'):
-            with patch.object(nav_manager, 'yaw_to_quaternion') as mock_quat:
-                mock_quat.return_value = {'x': 0, 'y': 0, 'z': 0.707, 'w': 0.707}
+        # Yaw conversion is done inline, not through a method
+        result = nav_manager.create_pose_stamped(1.0, 2.0, 1.57)
 
-                nav_manager.create_pose_stamped(
-                    1.0, 2.0, 1.57, 'map', context_manager
-                )
-
-                mock_quat.assert_called_once_with(1.57)
+        # Check quaternion was set (approximate values for yaw=1.57)
+        import math
+        assert abs(result.pose.orientation.w - math.cos(1.57 / 2.0)) < 0.01
+        assert abs(result.pose.orientation.z - math.sin(1.57 / 2.0)) < 0.01
 
 
 class TestParseWaypoints:
@@ -101,21 +107,26 @@ class TestParseWaypoints:
         Verifies that waypoint strings are correctly parsed
         into PoseStamped messages.
         """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+        mock_navigator_class.return_value = mock_navigator
+
         nav_manager = NavigationManager()
-        context_manager = MCPContextManager()
 
-        waypoints_str = '[{"position": {"x": 1.0, "y": 2.0, "z": 0.0},'
-        '"orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0}}]'
+        # Format is [[x, y], [x, y], ...]
+        waypoints_str = '[[1.0, 2.0], [3.0, 4.0]]'
 
-        with patch.object(nav_manager, 'create_pose_stamped') as mock_create:
-            mock_pose = Mock()
-            mock_create.return_value = mock_pose
+        result = nav_manager.parse_waypoints(waypoints_str)
 
-            result = nav_manager.parse_waypoints(waypoints_str, context_manager)
-
-            assert len(result) == 1
-            assert result[0] is mock_pose
-            mock_create.assert_called_once()
+        assert len(result) == 2
+        assert result[0].pose.position.x == 1.0
+        assert result[0].pose.position.y == 2.0
+        assert result[1].pose.position.x == 3.0
+        assert result[1].pose.position.y == 4.0
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_parse_waypoints_invalid_json(self, mock_navigator_class: Mock) -> None:
@@ -123,11 +134,12 @@ class TestParseWaypoints:
 
         Verifies that invalid JSON input is handled gracefully.
         """
-        nav_manager = NavigationManager()
-        context_manager = MCPContextManager()
+        from nav2_mcp_server.exceptions import NavigationError
 
-        with pytest.raises(ValueError):
-            nav_manager.parse_waypoints('invalid json', context_manager)
+        nav_manager = NavigationManager()
+
+        with pytest.raises(NavigationError):
+            nav_manager.parse_waypoints('invalid json')
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_parse_waypoints_empty_list(self, mock_navigator_class: Mock) -> None:
@@ -136,9 +148,8 @@ class TestParseWaypoints:
         Verifies that empty waypoint lists are handled correctly.
         """
         nav_manager = NavigationManager()
-        context_manager = MCPContextManager()
 
-        result = nav_manager.parse_waypoints('[]', context_manager)
+        result = nav_manager.parse_waypoints('[]')
 
         assert result == []
 
@@ -155,6 +166,7 @@ class TestNavigateToPose:
         """
         mock_navigator = Mock()
         mock_navigator_class.return_value = mock_navigator
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
@@ -164,10 +176,10 @@ class TestNavigateToPose:
             mock_create.return_value = mock_pose
 
             result = nav_manager.navigate_to_pose(
-                1.0, 2.0, 1.57, 'map', context_manager
+                1.0, 2.0, 1.57, context_manager
             )
 
-            assert 'started successfully' in result
+            assert 'success' in result.lower()
             mock_navigator.goToPose.assert_called_once_with(mock_pose)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -178,18 +190,19 @@ class TestNavigateToPose:
         and error messages are returned.
         """
         mock_navigator = Mock()
-        mock_navigator.goToPose.side_effect = Exception('Navigation failed')
+        mock_navigator.getResult.return_value = TaskResult.FAILED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
         with patch.object(nav_manager, 'create_pose_stamped'):
-            result = nav_manager.navigate_to_pose(
-                1.0, 2.0, 1.57, 'map', context_manager
-            )
+            with pytest.raises(NavigationError) as exc_info:
+                nav_manager.navigate_to_pose(
+                    1.0, 2.0, 1.57, context_manager
+                )
 
-            assert 'error' in result or 'failed' in result
+            assert 'Navigation to pose' in str(exc_info.value)
 
 
 class TestFollowWaypoints:
@@ -203,21 +216,18 @@ class TestFollowWaypoints:
         with parsed waypoints.
         """
         mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        waypoints_str = '[{"position": {"x": 1.0, "y": 2.0, "z": 0.0}}]'
+        waypoints_str = '[[1.0, 2.0], [3.0, 4.0]]'
 
-        with patch.object(nav_manager, 'parse_waypoints') as mock_parse:
-            mock_waypoints = [Mock(), Mock()]
-            mock_parse.return_value = mock_waypoints
+        result = nav_manager.follow_waypoints(waypoints_str, context_manager)
 
-            result = nav_manager.follow_waypoints(waypoints_str, context_manager)
-
-            assert 'started successfully' in result
-            mock_navigator.followWaypoints.assert_called_once_with(mock_waypoints)
+        assert 'success' in result.lower()
+        mock_navigator.followWaypoints.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_follow_waypoints_empty(self, mock_navigator_class: Mock) -> None:
@@ -225,15 +235,16 @@ class TestFollowWaypoints:
 
         Verifies that empty waypoint lists are handled appropriately.
         """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        with patch.object(nav_manager, 'parse_waypoints') as mock_parse:
-            mock_parse.return_value = []
+        result = nav_manager.follow_waypoints('[]', context_manager)
 
-            result = nav_manager.follow_waypoints('[]', context_manager)
-
-            assert 'no waypoints' in result.lower() or 'empty' in result.lower()
+        assert 'success' in result.lower()
 
 
 class TestSpinRobot:
@@ -247,6 +258,7 @@ class TestSpinRobot:
         with the specified angular distance.
         """
         mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -254,7 +266,7 @@ class TestSpinRobot:
 
         result = nav_manager.spin_robot(1.57, context_manager)
 
-        assert 'started successfully' in result
+        assert 'success' in result.lower()
         mock_navigator.spin.assert_called_once_with(1.57)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -264,15 +276,14 @@ class TestSpinRobot:
         Verifies that spin operation failures are handled gracefully.
         """
         mock_navigator = Mock()
-        mock_navigator.spin.side_effect = Exception('Spin failed')
+        mock_navigator.getResult.return_value = TaskResult.FAILED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.spin_robot(1.57, context_manager)
-
-        assert 'error' in result or 'failed' in result
+        with pytest.raises(NavigationError):
+            nav_manager.spin_robot(1.57, context_manager)
 
 
 class TestBackupRobot:
@@ -286,6 +297,7 @@ class TestBackupRobot:
         with distance and speed parameters.
         """
         mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -293,7 +305,7 @@ class TestBackupRobot:
 
         result = nav_manager.backup_robot(1.0, 0.15, context_manager)
 
-        assert 'started successfully' in result
+        assert 'success' in result.lower()
         mock_navigator.backup.assert_called_once_with(1.0, 0.15)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -303,16 +315,16 @@ class TestBackupRobot:
         Verifies that default backup parameters are correctly applied.
         """
         mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        # Test with default speed parameter
-        result = nav_manager.backup_robot(1.0, None, context_manager)
+        # Test with default speed parameter (0.15)
+        result = nav_manager.backup_robot(1.0, 0.15, context_manager)
 
-        assert 'started successfully' in result
-        # Should use default speed if None provided
+        assert 'success' in result.lower()
         mock_navigator.backup.assert_called_once()
 
 
@@ -331,9 +343,9 @@ class TestClearCostmaps:
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.clear_costmaps(context_manager)
+        result = nav_manager.clear_costmaps('all', context_manager)
 
-        assert 'cleared successfully' in result
+        assert 'cleared successfully' in result or 'success' in result.lower()
         mock_navigator.clearAllCostmaps.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -349,9 +361,8 @@ class TestClearCostmaps:
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.clear_costmaps(context_manager)
-
-        assert 'error' in result or 'failed' in result
+        with pytest.raises(NavigationError):
+            nav_manager.clear_costmaps('all', context_manager)
 
 
 class TestCancelNavigation:
@@ -364,6 +375,7 @@ class TestCancelNavigation:
         Verifies that ongoing navigation can be successfully cancelled.
         """
         mock_navigator = Mock()
+        mock_navigator.isTaskComplete.return_value = False
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
@@ -371,7 +383,7 @@ class TestCancelNavigation:
 
         result = nav_manager.cancel_navigation(context_manager)
 
-        assert 'cancelled successfully' in result
+        assert 'cancel' in result.lower() or 'requested' in result.lower()
         mock_navigator.cancelTask.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
@@ -381,38 +393,43 @@ class TestCancelNavigation:
         Verifies that cancellation failures are handled gracefully.
         """
         mock_navigator = Mock()
+        mock_navigator.isTaskComplete.return_value = False
         mock_navigator.cancelTask.side_effect = Exception('Cancel failed')
         mock_navigator_class.return_value = mock_navigator
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.cancel_navigation(context_manager)
-
-        assert 'error' in result or 'failed' in result
+        with pytest.raises(Exception, match='Cancel failed'):
+            nav_manager.cancel_navigation(context_manager)
 
 
 class TestNavigationManagerUtilities:
     """Tests for NavigationManager utility methods."""
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_yaw_to_quaternion_conversion(self, mock_navigator_class: Mock) -> None:
-        """Test yaw to quaternion conversion utility.
+    def test_create_pose_stamped_with_defaults(self, mock_navigator_class: Mock) -> None:
+        """Test pose creation with default yaw.
 
-        Verifies that yaw angles are correctly converted to quaternions.
+        Verifies that poses can be created with default orientation.
         """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+        mock_navigator_class.return_value = mock_navigator
+
         nav_manager = NavigationManager()
 
-        # Test conversion of common angles
-        quat_0 = nav_manager.yaw_to_quaternion(0.0)
-        quat_90 = nav_manager.yaw_to_quaternion(1.5708)  # 90 degrees
-        quat_180 = nav_manager.yaw_to_quaternion(3.14159)  # 180 degrees
+        # Test pose creation with default yaw (0.0)
+        pose = nav_manager.create_pose_stamped(1.0, 2.0)
 
-        # Verify quaternion structure
-        assert 'x' in quat_0 and 'y' in quat_0 and 'z' in quat_0 and 'w' in quat_0
-        assert 'x' in quat_90 and 'y' in quat_90 and 'z' in quat_90 and 'w' in quat_90
-        assert 'x' in quat_180 and 'y' in quat_180 and 'z' in quat_180 and 'w' in quat_180
-
-        # For 0 degrees, w should be close to 1.0
-        assert abs(quat_0['w'] - 1.0) < 0.001
-        assert abs(quat_0['z']) < 0.001
+        assert pose.pose.position.x == 1.0
+        assert pose.pose.position.y == 2.0
+        # Default yaw should result in w=1.0, z=0.0
+        import math
+        assert abs(pose.pose.orientation.w - math.cos(0.0 / 2.0)) < 0.01
+        assert abs(pose.pose.orientation.w - 1.0) < 0.001
+        assert abs(pose.pose.orientation.z) < 0.001

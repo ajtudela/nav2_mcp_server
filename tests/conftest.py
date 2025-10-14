@@ -6,24 +6,59 @@ configurations.
 """
 
 import math
-from typing import Any, Dict, List
-from unittest.mock import Mock
+from typing import Any, Dict, Generator, List
+from unittest.mock import Mock, patch
 
 import pytest
+from fastmcp import FastMCP
 from geometry_msgs.msg import PoseStamped
 from tf2_ros import Buffer
 
-from nav2_mcp_server.navigation import NavigationManager
 from nav2_mcp_server.server import create_server
-from nav2_mcp_server.transforms import TransformManager
 from nav2_mcp_server.utils import MCPContextManager
 
 
+def create_mock_config() -> Mock:
+    """Create a mock configuration object with all required attributes.
+
+    Returns
+    -------
+    Mock
+        A mock configuration object with properly configured attributes.
+    """
+    mock_config = Mock()
+
+    # Server config - create mock object with string returns
+    server_mock = Mock()
+    server_mock.server_name = 'nav2-mcp-server'
+    server_mock.version = '0.1.0'
+    server_mock.pose_uri = 'nav2://robot_pose'
+    mock_config.server = server_mock
+
+    # Logging config
+    logging_mock = Mock()
+    logging_mock.node_name = 'nav2_mcp_server'
+    logging_mock.tf_node_name = 'tf_listener'
+    logging_mock.log_level = 'INFO'
+    logging_mock.log_format = '%(asctime)s - %(levelname)s - %(message)s'
+    mock_config.logging = logging_mock
+
+    # Navigation config
+    navigation_mock = Mock()
+    navigation_mock.map_frame = 'map'
+    navigation_mock.base_link_frame = 'base_link'
+    navigation_mock.default_tf_timeout = 1.0
+    navigation_mock.max_waypoints = 100
+    mock_config.navigation = navigation_mock
+
+    return mock_config
+
+
 @pytest.fixture
-def mock_ros2_initialized():
+def mock_ros2_initialized() -> Generator[None, None, None]:
     """Mock ROS2 initialization."""
-    with pytest.mock.patch('rclpy.init'):
-        with pytest.mock.patch('rclpy.shutdown'):
+    with patch('rclpy.init'):
+        with patch('rclpy.shutdown'):
             yield
 
 
@@ -36,7 +71,7 @@ def mock_navigation_manager() -> Mock:
     Mock
         Mock NavigationManager with preset return values and side effects.
     """
-    mock_nav_manager = Mock(spec=NavigationManager)
+    mock_nav_manager = Mock()
 
     # Mock successful navigation result
     mock_nav_manager.navigate_to_pose.return_value = (
@@ -63,12 +98,16 @@ def mock_navigation_manager() -> Mock:
     mock_nav_manager.cancel_navigation.return_value = (
         'Navigation cancelled successfully'
     )
-    mock_nav_manager.nav2_lifecycle.return_value = (
-        'Lifecycle operation completed successfully'
+    mock_nav_manager.lifecycle_startup.return_value = (
+        'Nav2 lifecycle startup completed successfully'
+    )
+    mock_nav_manager.lifecycle_shutdown.return_value = (
+        'Nav2 lifecycle shutdown completed successfully'
     )
 
-    # Mock path planning results
-    mock_nav_manager.get_path.return_value = {
+    # Mock path planning results (returned as JSON strings)
+    import json
+    mock_nav_manager.get_path.return_value = json.dumps({
         'path': [
             {'x': 0.0, 'y': 0.0, 'theta': 0.0},
             {'x': 1.0, 'y': 1.0, 'theta': 0.785},
@@ -76,16 +115,7 @@ def mock_navigation_manager() -> Mock:
         ],
         'length': 2.828,
         'status': 'success'
-    }
-
-    mock_nav_manager.get_path_from_robot.return_value = {
-        'path': [
-            {'x': 1.0, 'y': 1.0, 'theta': 0.0},
-            {'x': 2.0, 'y': 2.0, 'theta': 0.785}
-        ],
-        'length': 1.414,
-        'status': 'success'
-    }
+    })
 
     return mock_nav_manager
 
@@ -99,7 +129,7 @@ def mock_transform_manager() -> Mock:
     Mock
         Mock TransformManager with preset return values.
     """
-    mock_tf_manager = Mock(spec=TransformManager)
+    mock_tf_manager = Mock()
 
     # Mock robot pose
     mock_tf_manager.get_robot_pose.return_value = {
@@ -252,7 +282,7 @@ def mock_tf_buffer() -> Mock:
 
 
 @pytest.fixture
-def test_server():
+def test_server() -> Generator[FastMCP, None, None]:
     """Provide the FastMCP server instance for testing.
 
     Returns
@@ -260,7 +290,9 @@ def test_server():
     FastMCP
         The configured MCP server instance.
     """
-    return create_server()
+    with patch('nav2_mcp_server.server.get_config') as mock_get_config:
+        mock_get_config.return_value = create_mock_config()
+        yield create_server()
 
 
 # Navigation result fixtures

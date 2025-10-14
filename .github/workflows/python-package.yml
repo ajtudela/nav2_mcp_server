@@ -49,7 +49,7 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
       - name: Type check with mypy
-        run: uv run mypy src/
+        run: uv run mypy src/ tests/
 
   # test:
   #   runs-on: ubuntu-latest

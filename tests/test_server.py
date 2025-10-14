@@ -4,7 +4,7 @@ This module tests the server initialization, tool registration,
 and basic server functionality.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from fastmcp import Client
 
@@ -104,7 +104,9 @@ async def test_server_client_connection() -> None:
     Verifies that the in-memory transport works correctly and
     the client can establish a connection.
     """
-    with patch('nav2_mcp_server.server.get_config'):
+    from tests.conftest import create_mock_config
+
+    with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
         with patch('nav2_mcp_server.tools.get_navigation_manager'):
             with patch('nav2_mcp_server.tools.get_transform_manager'):
                 with patch('nav2_mcp_server.resources.get_transform_manager'):
@@ -122,7 +124,9 @@ async def test_server_list_tools_via_client() -> None:
 
     Verifies that the MCP protocol correctly exposes available tools.
     """
-    with patch('nav2_mcp_server.server.get_config'):
+    from tests.conftest import create_mock_config
+
+    with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
         with patch('nav2_mcp_server.tools.get_navigation_manager'):
             with patch('nav2_mcp_server.tools.get_transform_manager'):
                 with patch('nav2_mcp_server.resources.get_transform_manager'):
@@ -139,7 +143,9 @@ async def test_server_list_resources_via_client() -> None:
 
     Verifies that the MCP protocol correctly exposes available resources.
     """
-    with patch('nav2_mcp_server.server.get_config'):
+    from tests.conftest import create_mock_config
+
+    with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
         with patch('nav2_mcp_server.tools.get_navigation_manager'):
             with patch('nav2_mcp_server.tools.get_transform_manager'):
                 with patch('nav2_mcp_server.resources.get_transform_manager'):

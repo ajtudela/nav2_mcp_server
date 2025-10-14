@@ -2,7 +2,11 @@
 
 ![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
 ![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)
+[![Build](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml)
 [![Docker image](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml)
+![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fajtudela%2Fnav2_mcp_server%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)
+![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fajtudela%2Fnav2_mcp_server%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&query=%24.project.dependencies%5B2%5D&label=dependency)
+
 
 An MCP (Model Context Protocol) server that provides tools and resources to control and monitor Nav2 navigation operations, allowing seamless integration with Nav2-enabled robots through the MCP protocol.
 

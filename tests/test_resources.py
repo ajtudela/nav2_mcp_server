@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 from fastmcp import Client
 
 from nav2_mcp_server.server import create_server
+from tests.conftest import create_mock_config
 
 
 class TestRobotPoseResource:
@@ -23,7 +24,7 @@ class TestRobotPoseResource:
         Verifies that the resource endpoint correctly returns
         robot pose information in JSON format.
         """
-        with patch('nav2_mcp_server.server.get_config'):
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
             with patch('nav2_mcp_server.tools.get_navigation_manager'):
                 with patch('nav2_mcp_server.tools.get_transform_manager'):
                     with patch(
@@ -38,12 +39,12 @@ class TestRobotPoseResource:
                             # Get the robot pose resource
                             pose_resource = None
                             for resource in resources:
-                                if 'pose' in resource.uri.lower():
+                                if 'pose' in str(resource.uri).lower():
                                     pose_resource = resource
                                     break
 
                             assert pose_resource is not None
-                            assert pose_resource.mime_type == 'application/json'
+                            assert pose_resource.mimeType == 'application/json'
 
     async def test_robot_pose_resource_content(
         self,
@@ -69,27 +70,30 @@ class TestRobotPoseResource:
 
         mock_transform_manager.get_robot_pose.return_value = expected_pose
 
-        with patch('nav2_mcp_server.server.get_config') as mock_config:
-            mock_config.return_value.server.pose_uri = 'nav2://robot_pose'
-            with patch('nav2_mcp_server.tools.get_navigation_manager'):
-                with patch('nav2_mcp_server.tools.get_transform_manager'):
-                    with patch(
-                        'nav2_mcp_server.resources.get_transform_manager',
-                        return_value=mock_transform_manager
-                    ):
-                        server = create_server()
-                        async with Client(server) as client:
-                            # Get resource content
-                            resource_content = await client.read_resource(
-                                'nav2://robot_pose'
-                            )
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
+            with patch('nav2_mcp_server.resources.get_config', return_value=create_mock_config()):
+                with patch('nav2_mcp_server.tools.get_navigation_manager'):
+                    with patch('nav2_mcp_server.tools.get_transform_manager'):
+                        with patch(
+                            'nav2_mcp_server.resources.get_transform_manager',
+                            return_value=mock_transform_manager
+                        ):
+                            server = create_server()
+                            async with Client(server) as client:
+                                # Get resource content
+                                resource_contents = await client.read_resource(
+                                    'nav2://robot_pose'
+                                )
 
-                            assert resource_content is not None
-                            # Content should be in JSON format
-                            import json
-                            parsed_content = json.loads(resource_content.content)
-                            assert 'pose' in parsed_content
-                            assert 'status' in parsed_content
+                                assert resource_contents is not None
+                                assert len(resource_contents) > 0
+                                resource_content = resource_contents[0]
+
+                                # Content should be in JSON format
+                                import json
+                                parsed_content = json.loads(resource_content.text)
+                                assert 'pose' in parsed_content
+                                assert 'status' in parsed_content
 
     async def test_robot_pose_resource_error_handling(self) -> None:
         """Test robot pose resource handles errors gracefully.
@@ -102,27 +106,30 @@ class TestRobotPoseResource:
             'Transform lookup failed'
         )
 
-        with patch('nav2_mcp_server.server.get_config') as mock_config:
-            mock_config.return_value.server.pose_uri = 'nav2://robot_pose'
-            with patch('nav2_mcp_server.tools.get_navigation_manager'):
-                with patch('nav2_mcp_server.tools.get_transform_manager'):
-                    with patch(
-                        'nav2_mcp_server.resources.get_transform_manager',
-                        return_value=mock_tf_manager
-                    ):
-                        server = create_server()
-                        async with Client(server) as client:
-                            # Get resource content with error
-                            resource_content = await client.read_resource(
-                                'nav2://robot_pose'
-                            )
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
+            with patch('nav2_mcp_server.resources.get_config', return_value=create_mock_config()):
+                with patch('nav2_mcp_server.tools.get_navigation_manager'):
+                    with patch('nav2_mcp_server.tools.get_transform_manager'):
+                        with patch(
+                            'nav2_mcp_server.resources.get_transform_manager',
+                            return_value=mock_tf_manager
+                        ):
+                            server = create_server()
+                            async with Client(server) as client:
+                                # Get resource content with error
+                                resource_contents = await client.read_resource(
+                                    'nav2://robot_pose'
+                                )
 
-                            assert resource_content is not None
-                            # Content should contain error information
-                            import json
-                            parsed_content = json.loads(resource_content.content)
-                            assert 'error' in parsed_content
-                            assert 'message' in parsed_content
+                                assert resource_contents is not None
+                                assert len(resource_contents) > 0
+                                resource_content = resource_contents[0]
+
+                                # Content should contain error information
+                                import json
+                                parsed_content = json.loads(resource_content.text)
+                                assert 'error' in parsed_content
+                                assert 'message' in parsed_content
 
     async def test_robot_pose_resource_mime_type(self) -> None:
         """Test robot pose resource has correct MIME type.
@@ -130,7 +137,7 @@ class TestRobotPoseResource:
         Verifies that the resource is properly configured
         with JSON MIME type.
         """
-        with patch('nav2_mcp_server.server.get_config'):
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
             with patch('nav2_mcp_server.tools.get_navigation_manager'):
                 with patch('nav2_mcp_server.tools.get_transform_manager'):
                     with patch(
@@ -148,8 +155,8 @@ class TestRobotPoseResource:
                                     break
 
                             assert pose_resource is not None
-                            assert pose_resource.mime_type == 'application/json'
-                            assert 'robot pose' in pose_resource.description.lower()
+                            assert pose_resource.mimeType == 'application/json'
+                            assert 'robot pose' in resource.description.lower()
 
 
 class TestResourceErrorHandling:
@@ -161,7 +168,7 @@ class TestResourceErrorHandling:
         Verifies that resources handle manager initialization
         failures gracefully.
         """
-        with patch('nav2_mcp_server.server.get_config'):
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
             with patch('nav2_mcp_server.tools.get_navigation_manager'):
                 with patch('nav2_mcp_server.tools.get_transform_manager'):
                     with patch(
@@ -202,25 +209,28 @@ class TestResourceErrorHandling:
 
         mock_tf_manager.get_robot_pose.return_value = complex_pose
 
-        with patch('nav2_mcp_server.server.get_config') as mock_config:
-            mock_config.return_value.server.pose_uri = 'nav2://robot_pose'
-            with patch('nav2_mcp_server.tools.get_navigation_manager'):
-                with patch('nav2_mcp_server.tools.get_transform_manager'):
-                    with patch(
-                        'nav2_mcp_server.resources.get_transform_manager',
-                        return_value=mock_tf_manager
-                    ):
-                        server = create_server()
-                        async with Client(server) as client:
-                            # Get resource content
-                            resource_content = await client.read_resource(
-                                'nav2://robot_pose'
-                            )
+        with patch('nav2_mcp_server.server.get_config', return_value=create_mock_config()):
+            with patch('nav2_mcp_server.resources.get_config', return_value=create_mock_config()):
+                with patch('nav2_mcp_server.tools.get_navigation_manager'):
+                    with patch('nav2_mcp_server.tools.get_transform_manager'):
+                        with patch(
+                            'nav2_mcp_server.resources.get_transform_manager',
+                            return_value=mock_tf_manager
+                        ):
+                            server = create_server()
+                            async with Client(server) as client:
+                                # Get resource content
+                                resource_contents = await client.read_resource(
+                                    'nav2://robot_pose'
+                                )
 
-                            assert resource_content is not None
-                            # Should be able to parse complex JSON
-                            import json
-                            parsed_content = json.loads(resource_content.content)
-                            assert parsed_content['yaw'] == 1.5708
-                            assert 'additional_info' in parsed_content
-                            assert parsed_content['additional_info']['confidence'] == 0.95
+                                assert resource_contents is not None
+                                assert len(resource_contents) > 0
+                                resource_content = resource_contents[0]
+
+                                # Should be able to parse complex JSON
+                                import json
+                                parsed_content = json.loads(resource_content.text)
+                                assert parsed_content['yaw'] == 1.5708
+                                assert 'additional_info' in parsed_content
+                                assert parsed_content['additional_info']['confidence'] == 0.95
