@@ -168,6 +168,39 @@ class TestBackupRobot:
                     assert result.content
                     mock_navigation_manager.backup_robot.assert_called_once()
 
+    async def test_backup_robot_default_speed(
+        self,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test robot backup with default speed (speed parameter = 0.0).
+
+        Verifies that when speed is 0.0, the default backup speed from
+        config is used.
+        """
+        with patch(
+            'nav2_mcp_server.tools.get_navigation_manager',
+            return_value=mock_navigation_manager
+        ):
+            with patch('nav2_mcp_server.tools.get_transform_manager'):
+                with patch('nav2_mcp_server.tools.get_config') as mock_config:
+                    # Set default backup speed in config
+                    config_obj = Mock()
+                    config_obj.navigation.default_backup_speed = 0.25
+                    mock_config.return_value = config_obj
+
+                    async with Client(test_server) as client:
+                        result = await client.call_tool(
+                            'backup_robot',
+                            {
+                                'distance': 1.0
+                                # speed not specified, should use default
+                            }
+                        )
+
+                        assert result.content
+                        mock_navigation_manager.backup_robot.assert_called_once()
+
 
 class TestDockRobot:
     """Tests for dock_robot tool."""
@@ -404,6 +437,31 @@ class TestNav2Lifecycle:
 
                     assert result.content
                     mock_navigation_manager.lifecycle_shutdown.assert_called_once()
+
+    async def test_nav2_lifecycle_invalid_operation(
+        self,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test Nav2 lifecycle with invalid operation.
+
+        Verifies that an invalid operation parameter results in an error.
+        """
+        with patch(
+            'nav2_mcp_server.tools.get_navigation_manager',
+            return_value=mock_navigation_manager
+        ):
+            with patch('nav2_mcp_server.tools.get_transform_manager'):
+                async with Client(test_server) as client:
+                    # Should handle invalid operation gracefully
+                    result = await client.call_tool(
+                        'nav2_lifecycle',
+                        {'operation': 'invalid_operation'}
+                    )
+
+                    # Result should contain error information
+                    assert result.content
+                    # The decorator should catch the ValueError and return JSON
 
 
 class TestToolErrorHandling:

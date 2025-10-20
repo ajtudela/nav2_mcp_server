@@ -805,3 +805,446 @@ class TestLifecycleOperations:
 
         with pytest.raises(NavigationError, match='Failed to shutdown Nav2 lifecycle'):
             nav_manager.lifecycle_shutdown(context_manager)
+
+
+class TestNavigationManagerDestroy:
+    """Tests for NavigationManager destroy method."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_destroy_with_navigator(self, mock_navigator_class: Mock) -> None:
+        """Test destroying navigation manager with active navigator.
+
+        Verifies that destroy properly cleans up navigator resources.
+        """
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        # Access navigator to create it
+        _ = nav_manager.navigator
+
+        # Destroy should call destroy_node
+        nav_manager.destroy()
+
+        mock_navigator.destroy_node.assert_called_once()
+        assert nav_manager._navigator is None
+
+    def test_destroy_without_navigator(self) -> None:
+        """Test destroying navigation manager without active navigator.
+
+        Verifies that destroy handles the case when navigator is None.
+        """
+        nav_manager = NavigationManager()
+
+        # Should not raise any exception
+        nav_manager.destroy()
+
+        assert nav_manager._navigator is None
+
+
+class TestMonitorNavigationProgress:
+    """Tests for _monitor_navigation_progress method."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_navigation_with_feedback(self, mock_navigator_class: Mock) -> None:
+        """Test navigation progress monitoring with feedback.
+
+        Verifies that progress monitoring correctly processes feedback.
+        """
+        mock_navigator = Mock()
+
+        # Mock feedback with estimated_time_remaining
+        mock_feedback = Mock()
+        mock_duration_msg = Mock()
+        mock_feedback.estimated_time_remaining = mock_duration_msg
+
+        # Simulate task completion after enough iterations to trigger feedback (multiple of 5)
+        task_complete_calls = [False] * 5 + [True]
+        mock_navigator.isTaskComplete.side_effect = task_complete_calls
+        mock_navigator.getFeedback.return_value = mock_feedback
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with patch('nav2_mcp_server.navigation.Duration') as mock_duration:
+            mock_duration_obj = Mock()
+            mock_duration_obj.nanoseconds = 5_000_000_000  # 5 seconds
+            mock_duration.from_msg.return_value = mock_duration_obj
+
+            # This should complete without error
+            nav_manager._monitor_navigation_progress(
+                context_manager, 'test operation'
+            )
+
+            # Verify Duration.from_msg was called since i=5 is divisible by
+            # feedback_update_interval (5)
+            assert mock_duration.from_msg.call_count >= 1
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_navigation_without_eta(self, mock_navigator_class: Mock) -> None:
+        """Test navigation progress monitoring without ETA in feedback.
+
+        Verifies that monitoring works when feedback lacks ETA.
+        """
+        mock_navigator = Mock()
+
+        # Mock feedback without estimated_time_remaining
+        mock_feedback = Mock()
+        del mock_feedback.estimated_time_remaining  # Ensure it doesn't exist
+
+        # Simulate task completion after a few iterations
+        # Use enough iterations to trigger a feedback update
+        task_complete_calls = [False] * 6 + [True]
+        mock_navigator.isTaskComplete.side_effect = task_complete_calls
+        mock_navigator.getFeedback.return_value = mock_feedback
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        # This should complete without error
+        nav_manager._monitor_navigation_progress(
+            context_manager, 'test operation'
+        )
+
+        # Verify getFeedback was called
+        assert mock_navigator.getFeedback.call_count > 0
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_navigation_no_feedback(self, mock_navigator_class: Mock) -> None:
+        """Test navigation progress monitoring with no feedback.
+
+        Verifies that monitoring handles None feedback gracefully.
+        """
+        mock_navigator = Mock()
+
+        # Return None for feedback
+        mock_navigator.getFeedback.return_value = None
+
+        # Complete quickly
+        mock_navigator.isTaskComplete.side_effect = [False, True]
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        # This should complete without error
+        nav_manager._monitor_navigation_progress(
+            context_manager, 'test operation'
+        )
+
+
+class TestMonitorWaypointProgress:
+    """Tests for _monitor_waypoint_progress method."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_waypoint_with_feedback(self, mock_navigator_class: Mock) -> None:
+        """Test waypoint progress monitoring with feedback.
+
+        Verifies that waypoint monitoring correctly processes feedback.
+        """
+        mock_navigator = Mock()
+
+        # Mock feedback with current_waypoint
+        mock_feedback = Mock()
+        mock_feedback.current_waypoint = 3
+
+        # Simulate task completion after enough iterations for feedback
+        task_complete_calls = [False] * 6 + [True]
+        mock_navigator.isTaskComplete.side_effect = task_complete_calls
+        mock_navigator.getFeedback.return_value = mock_feedback
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        # This should complete without error
+        nav_manager._monitor_waypoint_progress(context_manager)
+
+        # Verify getFeedback was called
+        assert mock_navigator.getFeedback.call_count > 0
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_waypoint_no_current_waypoint(self, mock_navigator_class: Mock) -> None:
+        """Test waypoint progress monitoring without current_waypoint attr.
+
+        Verifies that monitoring works when feedback lacks current_waypoint.
+        """
+        mock_navigator = Mock()
+
+        # Mock feedback without current_waypoint attribute
+        mock_feedback = Mock(spec=[])  # Empty spec means no attributes
+
+        # Simulate completion after enough iterations
+        task_complete_calls = [False] * 6 + [True]
+        mock_navigator.isTaskComplete.side_effect = task_complete_calls
+        mock_navigator.getFeedback.return_value = mock_feedback
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        # This should complete without error
+        nav_manager._monitor_waypoint_progress(context_manager)
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_monitor_waypoint_no_feedback(self, mock_navigator_class: Mock) -> None:
+        """Test waypoint progress monitoring with no feedback.
+
+        Verifies that monitoring handles None feedback gracefully.
+        """
+        mock_navigator = Mock()
+
+        # Return None for feedback
+        mock_navigator.getFeedback.return_value = None
+
+        # Complete quickly
+        mock_navigator.isTaskComplete.side_effect = [False, True]
+
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        # This should complete without error
+        nav_manager._monitor_waypoint_progress(context_manager)
+
+
+class TestGetNavigationManager:
+    """Tests for get_navigation_manager global function."""
+
+    def test_get_navigation_manager_singleton(self) -> None:
+        """Test that get_navigation_manager returns singleton instance.
+
+        Verifies that multiple calls return the same instance.
+        """
+        # Reset global state
+        import nav2_mcp_server.navigation as nav_module
+        nav_module._navigation_manager = None
+
+        manager1 = nav_module.get_navigation_manager()
+        manager2 = nav_module.get_navigation_manager()
+
+        assert manager1 is manager2
+        assert manager1 is not None
+
+    def test_get_navigation_manager_creates_on_first_call(self) -> None:
+        """Test that get_navigation_manager creates instance on first call.
+
+        Verifies that the manager is created lazily.
+        """
+        # Reset global state
+        import nav2_mcp_server.navigation as nav_module
+        nav_module._navigation_manager = None
+
+        assert nav_module._navigation_manager is None
+
+        manager = nav_module.get_navigation_manager()
+
+        assert manager is not None
+        assert nav_module._navigation_manager is manager
+
+
+class TestGetNavigator:
+    """Tests for get_navigator global function."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_get_navigator_returns_navigator(self, mock_navigator_class: Mock) -> None:
+        """Test that get_navigator returns the navigator instance.
+
+        Verifies that get_navigator properly accesses the navigator.
+        """
+        # Reset global state
+        import nav2_mcp_server.navigation as nav_module
+        nav_module._navigation_manager = None
+
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        navigator = nav_module.get_navigator()
+
+        assert navigator is mock_navigator
+
+
+class TestDockRobotWithoutContextManager:
+    """Tests for dock_robot without context_manager parameter."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_dock_robot_by_id_no_context(self, mock_navigator_class: Mock) -> None:
+        """Test docking robot by ID without context manager.
+
+        Verifies that docking works when context_manager is None.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        result = nav_manager.dock_robot(
+            dock_id='charging_dock_1',
+            nav_to_dock=True,
+            context_manager=None
+        )
+
+        assert 'Successfully docked' in result
+        mock_navigator.dockRobotByID.assert_called_once()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_dock_robot_by_pose_no_context(self, mock_navigator_class: Mock) -> None:
+        """Test docking robot by pose without context manager.
+
+        Verifies that docking by pose works when context_manager is None.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        # Create a dock pose
+        dock_pose = nav_manager.create_pose_stamped(5.0, 3.0, 0.0)
+
+        result = nav_manager.dock_robot(
+            dock_pose=dock_pose,
+            dock_type='',
+            nav_to_dock=True,
+            context_manager=None
+        )
+
+        assert 'Successfully docked' in result
+        mock_navigator.dockRobotByPose.assert_called_once()
+
+
+class TestUndockRobotWithoutContextManager:
+    """Tests for undock_robot without context_manager parameter."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_undock_robot_no_context(self, mock_navigator_class: Mock) -> None:
+        """Test undocking robot without context manager.
+
+        Verifies that undocking works when context_manager is None.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        result = nav_manager.undock_robot(
+            dock_type='',
+            context_manager=None
+        )
+
+        assert 'Successfully undocked' in result
+        mock_navigator.undockRobot.assert_called_once()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_undock_robot_with_dock_type(self, mock_navigator_class: Mock) -> None:
+        """Test undocking robot with specific dock type in message.
+
+        Verifies that dock type appears in success message when provided.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        result = nav_manager.undock_robot(
+            dock_type='custom_dock',
+            context_manager=None
+        )
+
+        assert 'Successfully undocked' in result
+        assert 'custom_dock' in result
+
+
+class TestGetPathWithoutContextManager:
+    """Tests for get_path without context_manager parameter."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_get_path_no_context(self, mock_navigator_class: Mock) -> None:
+        """Test path computation without context manager.
+
+        Verifies that get_path works when context_manager is None.
+        """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+
+        mock_path = Mock()
+        mock_path.poses = []
+        mock_navigator.getPath.return_value = mock_path
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
+            mock_dumps.return_value = '{"path": []}'
+
+            result = nav_manager.get_path(
+                start_x=0.0,
+                start_y=0.0,
+                start_yaw=0.0,
+                goal_x=5.0,
+                goal_y=5.0,
+                goal_yaw=1.57,
+                context_manager=None
+            )
+
+            assert result is not None
+            mock_navigator.getPath.assert_called_once()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_get_path_with_planner_id(self, mock_navigator_class: Mock) -> None:
+        """Test path computation with specific planner ID.
+
+        Verifies that planner_id is passed correctly to getPath.
+        """
+        mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Mock()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
+
+        mock_path = Mock()
+        mock_navigator.getPath.return_value = mock_path
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+
+        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
+            mock_dumps.return_value = '{}'
+
+            nav_manager.get_path(
+                start_x=0.0,
+                start_y=0.0,
+                start_yaw=0.0,
+                goal_x=5.0,
+                goal_y=5.0,
+                goal_yaw=1.57,
+                planner_id='NavFn',
+                use_start=True
+            )
+
+            # Verify getPath was called with planner_id
+            call_args = mock_navigator.getPath.call_args
+            assert call_args is not None
+            # Third argument (index 2) should be planner_id
+            assert call_args[0][2] == 'NavFn'

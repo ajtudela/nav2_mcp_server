@@ -4,10 +4,13 @@ This module tests configuration loading, environment variables,
 and configuration validation.
 """
 
+import logging
 import os
 from unittest.mock import patch
 
-from nav2_mcp_server.config import get_config
+import pytest
+
+from nav2_mcp_server.config import Config, get_config, load_config_from_dict, set_config
 
 
 class TestConfigLoading:
@@ -355,3 +358,313 @@ class TestConfigurationDefaults:
         log_format = config.logging.log_format
         assert 'levelname' in log_format.lower() or 'level' in log_format.lower()
         assert 'message' in log_format.lower()
+
+
+class TestConfigOverrides:
+    """Tests for configuration override functionality."""
+
+    def test_config_with_navigation_overrides(self) -> None:
+        """Test configuration with navigation section overrides.
+
+        Verifies that navigation configuration can be overridden
+        with custom values.
+        """
+        config_dict = {
+            'navigation': {
+                'default_backup_speed': 0.5,
+                'default_tf_timeout': 1.0,
+                'map_frame': 'world',
+                'base_link_frame': 'robot',
+                'max_waypoints': 50
+            }
+        }
+        config = Config(config_dict)
+
+        assert config.navigation.default_backup_speed == 0.5
+        assert config.navigation.default_tf_timeout == 1.0
+        assert config.navigation.map_frame == 'world'
+        assert config.navigation.base_link_frame == 'robot'
+        assert config.navigation.max_waypoints == 50
+
+    def test_config_with_logging_overrides(self) -> None:
+        """Test configuration with logging section overrides.
+
+        Verifies that logging configuration can be overridden
+        with custom values.
+        """
+        config_dict = {
+            'logging': {
+                'level': logging.DEBUG,
+                'log_format': 'custom format',
+                'node_name': 'test_node'
+            }
+        }
+        config = Config(config_dict)
+
+        assert config.logging.level == logging.DEBUG
+        assert config.logging.log_format == 'custom format'
+        assert config.logging.node_name == 'test_node'
+
+    def test_config_with_server_overrides(self) -> None:
+        """Test configuration with server section overrides.
+
+        Verifies that server configuration can be overridden
+        with custom values.
+        """
+        config_dict = {
+            'server': {
+                'transport': 'http',
+                'server_name': 'custom-server',
+                'description': 'Custom description',
+                'pose_uri': 'custom://pose'
+            }
+        }
+        config = Config(config_dict)
+
+        assert config.server.transport == 'http'
+        assert config.server.server_name == 'custom-server'
+        assert config.server.description == 'Custom description'
+        assert config.server.pose_uri == 'custom://pose'
+
+    def test_config_with_multiple_section_overrides(self) -> None:
+        """Test configuration with multiple section overrides.
+
+        Verifies that multiple configuration sections can be
+        overridden simultaneously.
+        """
+        config_dict = {
+            'navigation': {'max_waypoints': 200},
+            'logging': {'level': logging.WARNING},
+            'server': {'server_name': 'multi-override-server'}
+        }
+        config = Config(config_dict)
+
+        assert config.navigation.max_waypoints == 200
+        assert config.logging.level == logging.WARNING
+        assert config.server.server_name == 'multi-override-server'
+
+    def test_config_ignores_invalid_keys(self) -> None:
+        """Test that configuration ignores invalid override keys.
+
+        Verifies that unknown configuration keys are ignored
+        without raising errors.
+        """
+        config_dict = {
+            'navigation': {
+                'valid_key': 0.3,
+                'invalid_key': 'should_be_ignored'
+            }
+        }
+        # Should not raise an exception
+        config = Config(config_dict)
+        assert config is not None
+
+
+class TestConfigValidationErrors:
+    """Tests for configuration validation error conditions."""
+
+    def test_negative_backup_speed_raises_error(self) -> None:
+        """Test that negative backup speed raises ValueError.
+
+        Verifies that invalid backup speed values are caught
+        during validation.
+        """
+        with pytest.raises(ValueError, match='default_backup_speed must be positive'):
+            Config({'navigation': {'default_backup_speed': -0.1}})
+
+    def test_zero_backup_speed_raises_error(self) -> None:
+        """Test that zero backup speed raises ValueError.
+
+        Verifies that zero backup speed is rejected.
+        """
+        with pytest.raises(ValueError, match='default_backup_speed must be positive'):
+            Config({'navigation': {'default_backup_speed': 0.0}})
+
+    def test_negative_tf_timeout_raises_error(self) -> None:
+        """Test that negative TF timeout raises ValueError.
+
+        Verifies that invalid timeout values are caught.
+        """
+        with pytest.raises(ValueError, match='default_tf_timeout must be positive'):
+            Config({'navigation': {'default_tf_timeout': -1.0}})
+
+    def test_zero_tf_timeout_raises_error(self) -> None:
+        """Test that zero TF timeout raises ValueError.
+
+        Verifies that zero timeout is rejected.
+        """
+        with pytest.raises(ValueError, match='default_tf_timeout must be positive'):
+            Config({'navigation': {'default_tf_timeout': 0.0}})
+
+    def test_negative_max_waypoints_raises_error(self) -> None:
+        """Test that negative max waypoints raises ValueError.
+
+        Verifies that invalid waypoint limits are caught.
+        """
+        with pytest.raises(ValueError, match='max_waypoints must be positive'):
+            Config({'navigation': {'max_waypoints': -10}})
+
+    def test_zero_max_waypoints_raises_error(self) -> None:
+        """Test that zero max waypoints raises ValueError.
+
+        Verifies that zero waypoint limit is rejected.
+        """
+        with pytest.raises(ValueError, match='max_waypoints must be positive'):
+            Config({'navigation': {'max_waypoints': 0}})
+
+    def test_invalid_backup_distance_range_raises_error(self) -> None:
+        """Test that invalid backup distance range raises ValueError.
+
+        Verifies that min >= max backup distance is rejected.
+        """
+        with pytest.raises(
+            ValueError,
+            match='min_backup_distance must be less than max_backup_distance'
+        ):
+            Config({
+                'navigation': {
+                    'min_backup_distance': 5.0,
+                    'max_backup_distance': 2.0
+                }
+            })
+
+    def test_equal_backup_distance_raises_error(self) -> None:
+        """Test that equal backup distances raise ValueError.
+
+        Verifies that min == max backup distance is rejected.
+        """
+        with pytest.raises(
+            ValueError,
+            match='min_backup_distance must be less than max_backup_distance'
+        ):
+            Config({
+                'navigation': {
+                    'min_backup_distance': 3.0,
+                    'max_backup_distance': 3.0
+                }
+            })
+
+    def test_invalid_backup_speed_range_raises_error(self) -> None:
+        """Test that invalid backup speed range raises ValueError.
+
+        Verifies that min >= max backup speed is rejected.
+        """
+        with pytest.raises(
+            ValueError,
+            match='min_backup_speed must be less than max_backup_speed'
+        ):
+            Config({
+                'navigation': {
+                    'min_backup_speed': 0.8,
+                    'max_backup_speed': 0.3
+                }
+            })
+
+    def test_equal_backup_speed_raises_error(self) -> None:
+        """Test that equal backup speeds raise ValueError.
+
+        Verifies that min == max backup speed is rejected.
+        """
+        with pytest.raises(
+            ValueError,
+            match='min_backup_speed must be less than max_backup_speed'
+        ):
+            Config({
+                'navigation': {
+                    'min_backup_speed': 0.5,
+                    'max_backup_speed': 0.5
+                }
+            })
+
+
+class TestConfigUtilityFunctions:
+    """Tests for configuration utility functions."""
+
+    def test_to_dict_returns_nested_dict(self) -> None:
+        """Test that to_dict returns proper nested dictionary.
+
+        Verifies that configuration can be converted to
+        dictionary format.
+        """
+        config = Config()
+        config_dict = config.to_dict()
+
+        assert isinstance(config_dict, dict)
+        assert 'navigation' in config_dict
+        assert 'logging' in config_dict
+        assert 'server' in config_dict
+
+    def test_to_dict_contains_all_values(self) -> None:
+        """Test that to_dict includes all configuration values.
+
+        Verifies that the dictionary representation is complete.
+        """
+        config = Config()
+        config_dict = config.to_dict()
+
+        # Check navigation section
+        nav_dict = config_dict['navigation']
+        assert 'default_backup_speed' in nav_dict
+        assert 'default_tf_timeout' in nav_dict
+        assert 'map_frame' in nav_dict
+        assert 'base_link_frame' in nav_dict
+        assert 'max_waypoints' in nav_dict
+
+        # Check logging section
+        log_dict = config_dict['logging']
+        assert 'level' in log_dict
+        assert 'log_format' in log_dict
+        assert 'node_name' in log_dict
+
+        # Check server section
+        server_dict = config_dict['server']
+        assert 'transport' in server_dict
+        assert 'server_name' in server_dict
+        assert 'pose_uri' in server_dict
+
+    def test_set_config_updates_global(self) -> None:
+        """Test that set_config updates global configuration.
+
+        Verifies that the global config can be updated
+        with a new instance.
+        """
+        custom_config = Config({'server': {'server_name': 'test-config'}})
+        set_config(custom_config)
+
+        retrieved_config = get_config()
+        assert retrieved_config.server.server_name == 'test-config'
+
+    def test_load_config_from_dict_creates_and_sets_config(self) -> None:
+        """Test that load_config_from_dict creates and sets config.
+
+        Verifies that configuration can be loaded from dictionary
+        and set as global in one operation.
+        """
+        config_dict = {
+            'navigation': {'max_waypoints': 75},
+            'server': {'server_name': 'loaded-server'}
+        }
+        loaded_config = load_config_from_dict(config_dict)
+
+        assert loaded_config.navigation.max_waypoints == 75
+        assert loaded_config.server.server_name == 'loaded-server'
+
+        # Verify it's set as global
+        global_config = get_config()
+        assert global_config.navigation.max_waypoints == 75
+        assert global_config.server.server_name == 'loaded-server'
+
+    def test_config_to_dict_preserves_types(self) -> None:
+        """Test that to_dict preserves value types.
+
+        Verifies that type information is maintained
+        when converting to dictionary.
+        """
+        config = Config()
+        config_dict = config.to_dict()
+
+        # Check types are preserved
+        assert isinstance(config_dict['navigation']['default_backup_speed'], float)
+        assert isinstance(config_dict['navigation']['max_waypoints'], int)
+        assert isinstance(config_dict['logging']['level'], int)
+        assert isinstance(config_dict['server']['server_name'], str)

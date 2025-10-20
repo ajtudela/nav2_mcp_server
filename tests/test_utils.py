@@ -444,6 +444,100 @@ class TestAsyncContextManagerMethods:
         await context_manager.warning('Test warning without context')
 
 
+class TestNav2ActiveCheck:
+    """Tests for Nav2 active check decorator."""
+
+    def test_with_nav2_active_check_decorator(self) -> None:
+        """Test Nav2 active check decorator functionality.
+
+        Verifies that the decorator properly checks Nav2 activation.
+        """
+        from nav2_mcp_server.utils import with_nav2_active_check
+
+        @with_nav2_active_check
+        def test_function(x: int, y: int, context_manager: MCPContextManager | None = None) -> str:
+            return f'Nav2 active: {x} + {y}'
+
+        # Mock the navigator - patch where it's imported (inside the decorator)
+        with patch('nav2_mcp_server.navigation.get_navigator') as mock_get_nav:
+            mock_navigator = Mock()
+            mock_navigator.waitUntilNav2Active = Mock()
+            mock_get_nav.return_value = mock_navigator
+
+            result = test_function(1, 2, context_manager=None)
+
+            assert 'Nav2 active' in result
+            mock_navigator.waitUntilNav2Active.assert_called_once()
+
+    def test_with_nav2_active_check_with_context(self) -> None:
+        """Test Nav2 active check with context manager.
+
+        Verifies that context logging works during Nav2 activation.
+        """
+        from nav2_mcp_server.utils import with_nav2_active_check
+
+        @with_nav2_active_check
+        def test_function(context_manager: MCPContextManager | None = None) -> str:
+            return 'success'
+
+        # Create a real context manager
+        context_manager = MCPContextManager()
+
+        with patch('nav2_mcp_server.navigation.get_navigator') as mock_get_nav:
+            with patch('anyio.from_thread.run'):
+                mock_navigator = Mock()
+                mock_navigator.waitUntilNav2Active = Mock()
+                mock_get_nav.return_value = mock_navigator
+
+                result = test_function(context_manager=context_manager)
+
+                assert result == 'success'
+                mock_navigator.waitUntilNav2Active.assert_called_once()
+
+    def test_with_nav2_active_check_failure(self) -> None:
+        """Test Nav2 active check decorator with activation failure.
+
+        Verifies that exceptions during Nav2 activation are handled.
+        """
+        from nav2_mcp_server.exceptions import ROSError
+        from nav2_mcp_server.utils import with_nav2_active_check
+
+        @with_nav2_active_check
+        def test_function(context_manager: MCPContextManager | None = None) -> str:
+            return 'should not reach here'
+
+        with patch('nav2_mcp_server.navigation.get_navigator') as mock_get_nav:
+            mock_navigator = Mock()
+            mock_navigator.waitUntilNav2Active.side_effect = Exception('Nav2 not available')
+            mock_get_nav.return_value = mock_navigator
+
+            with pytest.raises(ROSError, match='Failed to activate Nav2'):
+                test_function(context_manager=None)
+
+    def test_with_nav2_active_check_failure_with_context(self) -> None:
+        """Test Nav2 active check failure with context logging.
+
+        Verifies that errors are logged to context when Nav2 activation fails.
+        """
+        from nav2_mcp_server.exceptions import ROSError
+        from nav2_mcp_server.utils import with_nav2_active_check
+
+        @with_nav2_active_check
+        def test_function(context_manager: MCPContextManager | None = None) -> str:
+            return 'should not reach here'
+
+        context_manager = MCPContextManager()
+
+        with patch('nav2_mcp_server.navigation.get_navigator') as mock_get_nav:
+            with patch('anyio.from_thread.run'):
+                mock_navigator = Mock()
+                mock_navigator.waitUntilNav2Active.side_effect = Exception('Nav2 timeout')
+                mock_get_nav.return_value = mock_navigator
+
+                with pytest.raises(ROSError, match='Failed to activate Nav2'):
+                    test_function(context_manager=context_manager)
+
+
 class TestUtilityHelpers:
     """Tests for utility helper functions."""
 

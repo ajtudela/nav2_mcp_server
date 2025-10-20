@@ -321,6 +321,69 @@ class TestTransformManagerDestroy:
         # Verify node cleanup is called
         mock_node.destroy_node.assert_called_once()
 
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_transform_manager_destroy_with_tf_listener(
+        self, mock_node_class: Mock
+    ) -> None:
+        """Test TransformManager cleanup with TF listener.
+
+        Verifies that the TF listener is properly cleaned up.
+        """
+        mock_node = Mock()
+        mock_node_class.return_value = mock_node
+        mock_tf_listener = Mock()
+        mock_tf_buffer = Mock()
+
+        tf_manager = TransformManager()
+        tf_manager._node = mock_node
+        tf_manager._tf_listener = mock_tf_listener
+        tf_manager._tf_buffer = mock_tf_buffer
+
+        # Destroy
+        tf_manager.destroy()
+
+        # Verify cleanup
+        assert tf_manager._tf_listener is None
+        assert tf_manager._tf_buffer is None
+        assert tf_manager._node is None
+        mock_node.destroy_node.assert_called_once()
+
+
+class TestTransformManagerGlobal:
+    """Tests for global transform manager instance."""
+
+    def test_get_transform_manager_creates_instance(self) -> None:
+        """Test that get_transform_manager creates a new instance.
+
+        Verifies that the global function creates a manager when needed.
+        """
+        from nav2_mcp_server import transforms
+
+        # Reset global instance
+        transforms._transform_manager = None
+
+        # Get manager
+        manager = transforms.get_transform_manager()
+
+        assert manager is not None
+        assert isinstance(manager, TransformManager)
+
+    def test_get_transform_manager_returns_same_instance(self) -> None:
+        """Test that get_transform_manager returns the same instance.
+
+        Verifies that the global function returns a singleton instance.
+        """
+        from nav2_mcp_server import transforms
+
+        # Reset global instance
+        transforms._transform_manager = None
+
+        # Get manager twice
+        manager1 = transforms.get_transform_manager()
+        manager2 = transforms.get_transform_manager()
+
+        assert manager1 is manager2
+
 
 class TestTransformManagerErrorHandling:
     """Tests for TransformManager error handling."""
@@ -372,3 +435,81 @@ class TestTransformManagerErrorHandling:
         tf_manager = TransformManager()
         assert tf_manager is not None
         assert tf_manager._node is None  # Not initialized yet
+
+    @patch('nav2_mcp_server.transforms.rclpy.spin_once')
+    @patch('nav2_mcp_server.transforms.TransformListener')
+    @patch('nav2_mcp_server.transforms.Buffer')
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_get_robot_pose_buffer_not_initialized(
+        self,
+        mock_node_class: Mock,
+        mock_buffer_class: Mock,
+        mock_listener_class: Mock,
+        mock_spin: Mock
+    ) -> None:
+        """Test robot pose retrieval when buffer is not initialized.
+
+        Verifies error handling when TF buffer is unexpectedly None.
+        """
+        from nav2_mcp_server.exceptions import TransformError
+
+        mock_node = Mock()
+        mock_node_class.return_value = mock_node
+
+        tf_manager = TransformManager()
+        # Force tf_buffer to be None after setup
+        tf_manager._ensure_tf_setup()
+        tf_manager._tf_buffer = None
+
+        context_manager = MCPContextManager()
+
+        with pytest.raises(TransformError, match='TF buffer not initialized'):
+            tf_manager.get_robot_pose(context_manager)
+
+    @patch('nav2_mcp_server.transforms.rclpy.spin_once')
+    @patch('nav2_mcp_server.transforms.TransformListener')
+    @patch('nav2_mcp_server.transforms.Buffer')
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_get_robot_pose_transform_timeout(
+        self,
+        mock_node_class: Mock,
+        mock_buffer_class: Mock,
+        mock_listener_class: Mock,
+        mock_spin: Mock
+    ) -> None:
+        """Test robot pose when transform never becomes available.
+
+        Verifies timeout handling when transform is not available.
+        """
+        from typing import Any
+
+        from nav2_mcp_server.exceptions import TransformError
+
+        mock_node = Mock()
+        mock_node_class.return_value = mock_node
+        mock_buffer_instance = Mock()
+        mock_buffer_class.return_value = mock_buffer_instance
+
+        # Mock transform never available
+        mock_buffer_instance.can_transform.return_value = False
+
+        tf_manager = TransformManager()
+        context_manager = MCPContextManager()
+
+        # Limit spin_once calls to avoid infinite loop
+        call_count = [0]
+
+        def spin_side_effect(*args: Any, **kwargs: Any) -> None:
+            call_count[0] += 1
+            if call_count[0] > 5:
+                # Force exception after a few tries
+                raise TransformError(
+                    'Could not get transform after waiting',
+                    0,
+                    {}
+                )
+
+        mock_spin.side_effect = spin_side_effect
+
+        with pytest.raises(TransformError):
+            tf_manager.get_robot_pose(context_manager)

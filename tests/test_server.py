@@ -4,7 +4,7 @@ This module tests the server initialization, tool registration,
 and basic server functionality.
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fastmcp import Client
 
@@ -155,3 +155,196 @@ async def test_server_list_resources_via_client() -> None:
                         assert len(resources_response) > 0, (
                             'Client should receive list of available resources'
                         )
+
+
+async def test_main_function_success() -> None:
+    """Test the main function executes successfully.
+
+    Verifies that the main function initializes ROS2, creates managers,
+    and starts the server.
+    """
+    from nav2_mcp_server.server import main
+
+    mock_server = Mock()
+    mock_server.run_async = AsyncMock()
+    mock_nav_manager = Mock()
+    mock_nav_manager.destroy = Mock()
+    mock_transform_manager = Mock()
+    mock_transform_manager.destroy = Mock()
+    mock_logger = Mock()
+
+    with patch('nav2_mcp_server.server.setup_logging', return_value=mock_logger):
+        with patch('nav2_mcp_server.server.rclpy.init') as mock_init:
+            with patch(
+                'nav2_mcp_server.server.get_navigation_manager',
+                return_value=mock_nav_manager
+            ):
+                with patch(
+                    'nav2_mcp_server.server.get_transform_manager',
+                    return_value=mock_transform_manager
+                ):
+                    with patch(
+                        'nav2_mcp_server.server.create_server',
+                        return_value=mock_server
+                    ):
+                        with patch(
+                            'nav2_mcp_server.server.rclpy.shutdown'
+                        ) as mock_shutdown:
+                            # Run main
+                            await main()
+
+                            # Verify initialization
+                            mock_logger.info.assert_any_call(
+                                'Starting Nav2 MCP Server...'
+                            )
+                            mock_init.assert_called_once()
+                            mock_logger.info.assert_any_call(
+                                'ROS2 initialized'
+                            )
+                            mock_logger.info.assert_any_call(
+                                'Navigation and transform managers initialized'
+                            )
+                            mock_logger.info.assert_any_call(
+                                'Starting MCP server on stdio transport'
+                            )
+
+                            # Verify cleanup
+                            mock_logger.info.assert_any_call(
+                                'Shutting down ROS2...'
+                            )
+                            mock_nav_manager.destroy.assert_called_once()
+                            mock_transform_manager.destroy.assert_called_once()
+                            mock_shutdown.assert_called_once()
+                            mock_logger.info.assert_any_call(
+                                'Nav2 MCP Server shutdown complete'
+                            )
+
+
+async def test_main_function_keyboard_interrupt() -> None:
+    """Test the main function handles KeyboardInterrupt gracefully.
+
+    Verifies that the server shuts down properly when interrupted.
+    """
+    from nav2_mcp_server.server import main
+
+    mock_server = Mock()
+    mock_server.run_async = AsyncMock(side_effect=KeyboardInterrupt())
+    mock_nav_manager = Mock()
+    mock_nav_manager.destroy = Mock()
+    mock_transform_manager = Mock()
+    mock_transform_manager.destroy = Mock()
+    mock_logger = Mock()
+
+    with patch('nav2_mcp_server.server.setup_logging', return_value=mock_logger):
+        with patch('nav2_mcp_server.server.rclpy.init'):
+            with patch(
+                'nav2_mcp_server.server.get_navigation_manager',
+                return_value=mock_nav_manager
+            ):
+                with patch(
+                    'nav2_mcp_server.server.get_transform_manager',
+                    return_value=mock_transform_manager
+                ):
+                    with patch(
+                        'nav2_mcp_server.server.create_server',
+                        return_value=mock_server
+                    ):
+                        with patch(
+                            'nav2_mcp_server.server.rclpy.shutdown'
+                        ) as mock_shutdown:
+                            # Run main
+                            await main()
+
+                            # Verify interrupt handling
+                            mock_logger.info.assert_any_call(
+                                'Server interrupted by user'
+                            )
+                            mock_shutdown.assert_called_once()
+
+
+async def test_main_function_exception() -> None:
+    """Test the main function handles exceptions properly.
+
+    Verifies that exceptions are logged and re-raised.
+    """
+    import pytest
+
+    from nav2_mcp_server.server import main
+
+    mock_server = Mock()
+    mock_server.run_async = AsyncMock(side_effect=RuntimeError('Test error'))
+    mock_nav_manager = Mock()
+    mock_nav_manager.destroy = Mock()
+    mock_transform_manager = Mock()
+    mock_transform_manager.destroy = Mock()
+    mock_logger = Mock()
+
+    with patch('nav2_mcp_server.server.setup_logging', return_value=mock_logger):
+        with patch('nav2_mcp_server.server.rclpy.init'):
+            with patch(
+                'nav2_mcp_server.server.get_navigation_manager',
+                return_value=mock_nav_manager
+            ):
+                with patch(
+                    'nav2_mcp_server.server.get_transform_manager',
+                    return_value=mock_transform_manager
+                ):
+                    with patch(
+                        'nav2_mcp_server.server.create_server',
+                        return_value=mock_server
+                    ):
+                        with patch(
+                            'nav2_mcp_server.server.rclpy.shutdown'
+                        ) as mock_shutdown:
+                            # Run main and expect exception
+                            with pytest.raises(
+                                RuntimeError, match='Test error'
+                            ):
+                                await main()
+
+                            # Verify error handling
+                            mock_logger.error.assert_any_call(
+                                'Server error: Test error'
+                            )
+                            mock_shutdown.assert_called_once()
+
+
+async def test_main_function_cleanup_without_destroy() -> None:
+    """Test the main function cleanup when managers don't have destroy method.
+
+    Verifies that cleanup works even if managers lack destroy method.
+    """
+    from nav2_mcp_server.server import main
+
+    mock_server = Mock()
+    mock_server.run_async = AsyncMock()
+    # Create managers without destroy method
+    mock_nav_manager = Mock(spec=[])
+    mock_transform_manager = Mock(spec=[])
+    mock_logger = Mock()
+
+    with patch('nav2_mcp_server.server.setup_logging', return_value=mock_logger):
+        with patch('nav2_mcp_server.server.rclpy.init'):
+            with patch(
+                'nav2_mcp_server.server.get_navigation_manager',
+                return_value=mock_nav_manager
+            ):
+                with patch(
+                    'nav2_mcp_server.server.get_transform_manager',
+                    return_value=mock_transform_manager
+                ):
+                    with patch(
+                        'nav2_mcp_server.server.create_server',
+                        return_value=mock_server
+                    ):
+                        with patch(
+                            'nav2_mcp_server.server.rclpy.shutdown'
+                        ) as mock_shutdown:
+                            # Run main
+                            await main()
+
+                            # Verify cleanup still works
+                            mock_shutdown.assert_called_once()
+                            mock_logger.info.assert_any_call(
+                                'Nav2 MCP Server shutdown complete'
+                            )
