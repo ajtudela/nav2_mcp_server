@@ -56,7 +56,7 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 - [uv](https://github.com/astral-sh/uv): Python package manager (optional)
 
 
-### Install with uv (recommended)
+### Install with uv
 
 Clone the repository and install with uv:
 
@@ -72,24 +72,6 @@ Or install directly from the repository:
 
 ```bash
 uv add git+https://github.com/ajtudela/nav2_mcp_server.git
-```
-
-### Install with pip
-
-Install the package in development mode:
-
-```bash
-git clone https://github.com/ajtudela/nav2_mcp_server.git
-cd nav2_mcp_server
-# Set up ROS 2 environment variables if needed
-export ROS_DOMAIN_ID=0
-python3 -m pip install .
-```
-
-Or install directly from the repository:
-
-```bash
-python3 -m pip install git+https://github.com/ajtudela/nav2_mcp_server.git
 ```
 
 ### Docker
@@ -116,17 +98,11 @@ docker pull ghcr.io/ajtudela/nav2_mcp_server:latest
 uv run nav2_mcp_server
 ```
 
-### Running with pip installation
-
-```bash
-python3 -m nav2_mcp_server
-```
-
 ### Configuration example for Claude Desktop/Cursor/VSCode
 
 Add this configuration to your application's settings (mcp.json):
 
-#### Using uv (recommended)
+#### Using uv
 ```json
 {
   "nav2 mcp server": {
@@ -136,24 +112,6 @@ Add this configuration to your application's settings (mcp.json):
       "run",
       "--directory",
       "/path/to/nav2_mcp_server",
-      "nav2_mcp_server"
-    ],
-    "env": {
-      "ROS_DOMAIN_ID": "0",
-      "ROS_LOCALHOST_ONLY": "1"
-    }
-  }
-}
-```
-
-#### Using pip installation
-```json
-{
-  "nav2 mcp server": {
-    "type": "stdio",
-    "command": "python3",
-    "args": [
-      "-m",
       "nav2_mcp_server"
     ],
     "env": {
