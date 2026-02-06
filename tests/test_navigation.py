@@ -657,8 +657,9 @@ class TestUndockRobot:
 class TestGetPath:
     """Tests for get_path functionality."""
 
+    @patch('nav2_mcp_server.utils.safe_json_dumps')
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_get_path_success(self, mock_navigator_class: Mock) -> None:
+    def test_get_path_success(self, mock_navigator_class: Mock, mock_dumps: Mock) -> None:
         """Test successful path computation.
 
         Verifies that get_path correctly computes a path.
@@ -680,27 +681,27 @@ class TestGetPath:
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
-            mock_dumps.return_value = '{"path": "test"}'
+        mock_dumps.return_value = '{"path": "test"}'
 
-            result = nav_manager.get_path(
-                start_x=0.0,
-                start_y=0.0,
-                start_yaw=0.0,
-                goal_x=5.0,
-                goal_y=5.0,
-                goal_yaw=1.57,
-                planner_id='GridBased',
-                use_start=True,
-                context_manager=context_manager
-            )
+        result = nav_manager.get_path(
+            start_x=0.0,
+            start_y=0.0,
+            start_yaw=0.0,
+            goal_x=5.0,
+            goal_y=5.0,
+            goal_yaw=1.57,
+            planner_id='GridBased',
+            use_start=True,
+            context_manager=context_manager
+        )
 
-            assert result is not None
-            assert result == '{"path": "test"}'
-            mock_dumps.assert_called_once_with(mock_path)
+        assert result is not None
+        assert result == '{"path": "test"}'
+        mock_dumps.assert_called_once_with(mock_path)
 
+    @patch('nav2_mcp_server.utils.safe_json_dumps')
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_get_path_without_start(self, mock_navigator_class: Mock) -> None:
+    def test_get_path_without_start(self, mock_navigator_class: Mock, mock_dumps: Mock) -> None:
         """Test path computation without explicit start pose.
 
         Verifies that get_path works when use_start=False.
@@ -719,22 +720,21 @@ class TestGetPath:
 
         nav_manager = NavigationManager()
 
-        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
-            mock_dumps.return_value = '{"path": []}'
+        mock_dumps.return_value = '{"path": []}'
 
-            result = nav_manager.get_path(
-                start_x=0.0,
-                start_y=0.0,
-                start_yaw=0.0,
-                goal_x=5.0,
-                goal_y=5.0,
-                goal_yaw=1.57,
-                use_start=False
-            )
+        result = nav_manager.get_path(
+            start_x=0.0,
+            start_y=0.0,
+            start_yaw=0.0,
+            goal_x=5.0,
+            goal_y=5.0,
+            goal_yaw=1.57,
+            use_start=False
+        )
 
-            assert result is not None
-            # Verify getPath was called (not getPathThroughPoses)
-            mock_navigator.getPath.assert_called_once()
+        assert result is not None
+        # Verify getPath was called (not getPathThroughPoses)
+        mock_navigator.getPath.assert_called_once()
 
 
 class TestLifecycleOperations:
@@ -845,8 +845,13 @@ class TestNavigationManagerDestroy:
 class TestMonitorNavigationProgress:
     """Tests for _monitor_navigation_progress method."""
 
+    @patch('nav2_mcp_server.navigation.Duration')
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_monitor_navigation_with_feedback(self, mock_navigator_class: Mock) -> None:
+    def test_monitor_navigation_with_feedback(
+        self,
+        mock_navigator_class: Mock,
+        mock_duration: Mock
+    ) -> None:
         """Test navigation progress monitoring with feedback.
 
         Verifies that progress monitoring correctly processes feedback.
@@ -868,19 +873,18 @@ class TestMonitorNavigationProgress:
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        with patch('nav2_mcp_server.navigation.Duration') as mock_duration:
-            mock_duration_obj = Mock()
-            mock_duration_obj.nanoseconds = 5_000_000_000  # 5 seconds
-            mock_duration.from_msg.return_value = mock_duration_obj
+        mock_duration_obj = Mock()
+        mock_duration_obj.nanoseconds = 5_000_000_000  # 5 seconds
+        mock_duration.from_msg.return_value = mock_duration_obj
 
-            # This should complete without error
-            nav_manager._monitor_navigation_progress(
-                context_manager, 'test operation'
-            )
+        # This should complete without error
+        nav_manager._monitor_navigation_progress(
+            context_manager, 'test operation'
+        )
 
-            # Verify Duration.from_msg was called since i=5 is divisible by
-            # feedback_update_interval (5)
-            assert mock_duration.from_msg.call_count >= 1
+        # Verify Duration.from_msg was called since i=5 is divisible by
+        # feedback_update_interval (5)
+        assert mock_duration.from_msg.call_count >= 1
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_monitor_navigation_without_eta(self, mock_navigator_class: Mock) -> None:
@@ -1174,8 +1178,9 @@ class TestUndockRobotWithoutContextManager:
 class TestGetPathWithoutContextManager:
     """Tests for get_path without context_manager parameter."""
 
+    @patch('nav2_mcp_server.utils.safe_json_dumps')
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_get_path_no_context(self, mock_navigator_class: Mock) -> None:
+    def test_get_path_no_context(self, mock_navigator_class: Mock, mock_dumps: Mock) -> None:
         """Test path computation without context manager.
 
         Verifies that get_path works when context_manager is None.
@@ -1194,24 +1199,24 @@ class TestGetPathWithoutContextManager:
 
         nav_manager = NavigationManager()
 
-        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
-            mock_dumps.return_value = '{"path": []}'
+        mock_dumps.return_value = '{"path": []}'
 
-            result = nav_manager.get_path(
-                start_x=0.0,
-                start_y=0.0,
-                start_yaw=0.0,
-                goal_x=5.0,
-                goal_y=5.0,
-                goal_yaw=1.57,
-                context_manager=None
-            )
+        result = nav_manager.get_path(
+            start_x=0.0,
+            start_y=0.0,
+            start_yaw=0.0,
+            goal_x=5.0,
+            goal_y=5.0,
+            goal_yaw=1.57,
+            context_manager=None
+        )
 
-            assert result is not None
-            mock_navigator.getPath.assert_called_once()
+        assert result is not None
+        mock_navigator.getPath.assert_called_once()
 
+    @patch('nav2_mcp_server.utils.safe_json_dumps')
     @patch('nav2_mcp_server.navigation.BasicNavigator')
-    def test_get_path_with_planner_id(self, mock_navigator_class: Mock) -> None:
+    def test_get_path_with_planner_id(self, mock_navigator_class: Mock, mock_dumps: Mock) -> None:
         """Test path computation with specific planner ID.
 
         Verifies that planner_id is passed correctly to getPath.
@@ -1229,22 +1234,21 @@ class TestGetPathWithoutContextManager:
 
         nav_manager = NavigationManager()
 
-        with patch('nav2_mcp_server.utils.safe_json_dumps') as mock_dumps:
-            mock_dumps.return_value = '{}'
+        mock_dumps.return_value = '{}'
 
-            nav_manager.get_path(
-                start_x=0.0,
-                start_y=0.0,
-                start_yaw=0.0,
-                goal_x=5.0,
-                goal_y=5.0,
-                goal_yaw=1.57,
-                planner_id='NavFn',
-                use_start=True
-            )
+        nav_manager.get_path(
+            start_x=0.0,
+            start_y=0.0,
+            start_yaw=0.0,
+            goal_x=5.0,
+            goal_y=5.0,
+            goal_yaw=1.57,
+            planner_id='NavFn',
+            use_start=True
+        )
 
-            # Verify getPath was called with planner_id
-            call_args = mock_navigator.getPath.call_args
-            assert call_args is not None
-            # Third argument (index 2) should be planner_id
-            assert call_args[0][2] == 'NavFn'
+        # Verify getPath was called with planner_id
+        call_args = mock_navigator.getPath.call_args
+        assert call_args is not None
+        # Third argument (index 2) should be planner_id
+        assert call_args[0][2] == 'NavFn'

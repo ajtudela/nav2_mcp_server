@@ -57,9 +57,8 @@ def create_mock_config() -> Mock:
 @pytest.fixture
 def mock_ros2_initialized() -> Generator[None, None, None]:
     """Mock ROS2 initialization."""
-    with patch('rclpy.init'):
-        with patch('rclpy.shutdown'):
-            yield
+    with patch('rclpy.init'), patch('rclpy.shutdown'):
+        yield
 
 
 @pytest.fixture
