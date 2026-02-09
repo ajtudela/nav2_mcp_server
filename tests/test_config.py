@@ -182,7 +182,10 @@ class TestConfigValidation:
 
     def test_validate_backup_distance_limits(self) -> None:
         """Test validation of backup distance limits."""
-        with pytest.raises(ValueError, match='min_backup_distance must be less than max_backup_distance'):
+        with pytest.raises(
+                ValueError,
+                match='min_backup_distance must be less than max_backup_distance'
+        ):
             Config({
                 'navigation': {
                     'min_backup_distance': 10,
