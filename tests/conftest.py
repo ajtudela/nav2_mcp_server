@@ -33,6 +33,7 @@ def create_mock_config() -> Mock:
     server_mock.server_name = 'nav2-mcp-server'
     server_mock.version = '0.1.0'
     server_mock.pose_uri = 'nav2://robot_pose'
+    server_mock.transport = 'stdio'
     mock_config.server = server_mock
 
     # Logging config

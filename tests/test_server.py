@@ -190,11 +190,13 @@ async def test_server_list_resources_via_client(
 @patch('nav2_mcp_server.server.create_server')
 @patch('nav2_mcp_server.server.get_transform_manager')
 @patch('nav2_mcp_server.server.get_navigation_manager')
+@patch('nav2_mcp_server.server.get_config')
 @patch('nav2_mcp_server.server.rclpy.init')
 @patch('nav2_mcp_server.server.setup_logging')
 async def test_main_function_success(
     mock_setup_logging: Mock,
     mock_init: Mock,
+    mock_get_config: Mock,
     mock_get_nav_manager: Mock,
     mock_get_tf_manager: Mock,
     mock_create_server: Mock,
@@ -206,7 +208,9 @@ async def test_main_function_success(
     and starts the server.
     """
     from nav2_mcp_server.server import main
+    from tests.conftest import create_mock_config
 
+    mock_get_config.return_value = create_mock_config()
     mock_server = Mock()
     mock_server.run_async = AsyncMock()
     mock_nav_manager = Mock()
@@ -252,11 +256,13 @@ async def test_main_function_success(
 @patch('nav2_mcp_server.server.create_server')
 @patch('nav2_mcp_server.server.get_transform_manager')
 @patch('nav2_mcp_server.server.get_navigation_manager')
+@patch('nav2_mcp_server.server.get_config')
 @patch('nav2_mcp_server.server.rclpy.init')
 @patch('nav2_mcp_server.server.setup_logging')
 async def test_main_function_keyboard_interrupt(
     mock_setup_logging: Mock,
     mock_init: Mock,
+    mock_get_config: Mock,
     mock_get_nav_manager: Mock,
     mock_get_tf_manager: Mock,
     mock_create_server: Mock,
@@ -267,7 +273,9 @@ async def test_main_function_keyboard_interrupt(
     Verifies that the server shuts down properly when interrupted.
     """
     from nav2_mcp_server.server import main
+    from tests.conftest import create_mock_config
 
+    mock_get_config.return_value = create_mock_config()
     mock_server = Mock()
     mock_server.run_async = AsyncMock(side_effect=KeyboardInterrupt())
     mock_nav_manager = Mock()
@@ -295,11 +303,13 @@ async def test_main_function_keyboard_interrupt(
 @patch('nav2_mcp_server.server.create_server')
 @patch('nav2_mcp_server.server.get_transform_manager')
 @patch('nav2_mcp_server.server.get_navigation_manager')
+@patch('nav2_mcp_server.server.get_config')
 @patch('nav2_mcp_server.server.rclpy.init')
 @patch('nav2_mcp_server.server.setup_logging')
 async def test_main_function_exception(
     mock_setup_logging: Mock,
     mock_init: Mock,
+    mock_get_config: Mock,
     mock_get_nav_manager: Mock,
     mock_get_tf_manager: Mock,
     mock_create_server: Mock,
@@ -312,7 +322,9 @@ async def test_main_function_exception(
     import pytest
 
     from nav2_mcp_server.server import main
+    from tests.conftest import create_mock_config
 
+    mock_get_config.return_value = create_mock_config()
     mock_server = Mock()
     mock_server.run_async = AsyncMock(side_effect=RuntimeError('Test error'))
     mock_nav_manager = Mock()
@@ -343,11 +355,13 @@ async def test_main_function_exception(
 @patch('nav2_mcp_server.server.create_server')
 @patch('nav2_mcp_server.server.get_transform_manager')
 @patch('nav2_mcp_server.server.get_navigation_manager')
+@patch('nav2_mcp_server.server.get_config')
 @patch('nav2_mcp_server.server.rclpy.init')
 @patch('nav2_mcp_server.server.setup_logging')
 async def test_main_function_cleanup_without_destroy(
     mock_setup_logging: Mock,
     mock_init: Mock,
+    mock_get_config: Mock,
     mock_get_nav_manager: Mock,
     mock_get_tf_manager: Mock,
     mock_create_server: Mock,
@@ -358,7 +372,9 @@ async def test_main_function_cleanup_without_destroy(
     Verifies that cleanup works even if managers lack destroy method.
     """
     from nav2_mcp_server.server import main
+    from tests.conftest import create_mock_config
 
+    mock_get_config.return_value = create_mock_config()
     mock_server = Mock()
     mock_server.run_async = AsyncMock()
     # Create managers without destroy method
