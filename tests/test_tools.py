@@ -172,6 +172,29 @@ class TestBackupRobot:
             assert result.content
             mock_navigation_manager.backup_robot.assert_called_once()
 
+    @patch('nav2_mcp_server.tools.get_transform_manager')
+    @patch('nav2_mcp_server.tools.get_navigation_manager')
+    async def test_backup_robot_null_speed(
+        self,
+        mock_get_nav_manager: Mock,
+        mock_get_tf_manager: Mock,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test backup robot with None speed (should use default)."""
+        mock_get_nav_manager.return_value = mock_navigation_manager
+        async with Client(test_server) as client:
+            result = await client.call_tool(
+                'backup_robot',
+                {
+                    'distance': 1.0,
+                    'speed': None
+                }
+            )
+
+            assert result.content
+            mock_navigation_manager.backup_robot.assert_called_once()
+
     @patch('nav2_mcp_server.tools.get_config')
     @patch('nav2_mcp_server.tools.get_transform_manager')
     @patch('nav2_mcp_server.tools.get_navigation_manager')

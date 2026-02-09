@@ -161,9 +161,9 @@ def create_mcp_tools(mcp: FastMCP) -> None:
             float, 'Distance to back up in meters (positive value)'
         ],
         speed: Annotated[
-            float,
+            Optional[float],
             'Backup speed in m/s (typically 0.1-0.5)'
-        ] = 0.0,
+        ] = None,
         ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
     ) -> str:
         """Move the robot backward in a straight line."""

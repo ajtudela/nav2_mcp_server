@@ -230,6 +230,19 @@ class TestFollowWaypoints:
         mock_navigator.followWaypoints.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_follow_waypoints_failure(self, mock_navigator_class: Mock) -> None:
+        """Test waypoint following failure handling."""
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.FAILED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with pytest.raises(NavigationError):
+            nav_manager.follow_waypoints('[[1.0, 2.0]]', context_manager)
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_follow_waypoints_empty(self, mock_navigator_class: Mock) -> None:
         """Test waypoint following with empty waypoints.
 
@@ -309,6 +322,19 @@ class TestBackupRobot:
         mock_navigator.backup.assert_called_once_with(1.0, 0.15)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_backup_robot_failure(self, mock_navigator_class: Mock) -> None:
+        """Test backup operation failure handling."""
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.FAILED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with pytest.raises(NavigationError):
+            nav_manager.backup_robot(1.0, 0.15, context_manager)
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_backup_robot_with_defaults(self, mock_navigator_class: Mock) -> None:
         """Test robot backup with default parameters.
 
@@ -347,6 +373,15 @@ class TestClearCostmaps:
 
         assert 'cleared successfully' in result or 'success' in result.lower()
         mock_navigator.clearAllCostmaps.assert_called_once()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_clear_costmaps_invalid_type(self, mock_navigator_class: Mock) -> None:
+        """Test costmap clearing with invalid type."""
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with pytest.raises(NavigationError, match='Invalid costmap type'):
+            nav_manager.clear_costmaps('invalid', context_manager)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_clear_costmaps_failure(self, mock_navigator_class: Mock) -> None:

@@ -358,7 +358,7 @@ async def test_main_function_exception(
 @patch('nav2_mcp_server.server.get_config')
 @patch('nav2_mcp_server.server.rclpy.init')
 @patch('nav2_mcp_server.server.setup_logging')
-async def test_main_function_cleanup_without_destroy(
+async def test_main_function_http_transport(
     mock_setup_logging: Mock,
     mock_init: Mock,
     mock_get_config: Mock,
@@ -367,30 +367,64 @@ async def test_main_function_cleanup_without_destroy(
     mock_create_server: Mock,
     mock_shutdown: Mock
 ) -> None:
-    """Test the main function cleanup when managers don't have destroy method.
+    """Test the main function with HTTP transport."""
+    from nav2_mcp_server.server import main
+    from tests.conftest import create_mock_config
 
-    Verifies that cleanup works even if managers lack destroy method.
-    """
+    mock_cfg = create_mock_config()
+    mock_cfg.server.transport = 'http'
+    mock_cfg.server.http_host = '1.2.3.4'
+    mock_cfg.server.http_port = 4000
+    mock_get_config.return_value = mock_cfg
+
+    mock_server = Mock()
+    mock_server.run_async = AsyncMock()
+    mock_get_nav_manager.return_value = Mock()
+    mock_get_tf_manager.return_value = Mock()
+    mock_create_server.return_value = mock_server
+
+    await main()
+
+    mock_server.run_async.assert_called_once_with(
+        transport='http',
+        host='1.2.3.4',
+        port=4000
+    )
+
+
+@patch('nav2_mcp_server.server.rclpy.shutdown')
+@patch('nav2_mcp_server.server.create_server')
+@patch('nav2_mcp_server.server.get_transform_manager')
+@patch('nav2_mcp_server.server.get_navigation_manager')
+@patch('nav2_mcp_server.server.get_config')
+@patch('nav2_mcp_server.server.rclpy.init')
+@patch('nav2_mcp_server.server.setup_logging')
+async def test_main_function_no_destroy_method(
+    mock_setup_logging: Mock,
+    mock_init: Mock,
+    mock_get_config: Mock,
+    mock_get_nav_manager: Mock,
+    mock_get_tf_manager: Mock,
+    mock_create_server: Mock,
+    mock_shutdown: Mock
+) -> None:
+    """Test the main function when managers don't have destroy method."""
     from nav2_mcp_server.server import main
     from tests.conftest import create_mock_config
 
     mock_get_config.return_value = create_mock_config()
     mock_server = Mock()
     mock_server.run_async = AsyncMock()
-    # Create managers without destroy method
-    mock_nav_manager = Mock(spec=[])
-    mock_transform_manager = Mock(spec=[])
-    mock_logger = Mock()
 
-    mock_setup_logging.return_value = mock_logger
-    mock_get_nav_manager.return_value = mock_nav_manager
-    mock_get_tf_manager.return_value = mock_transform_manager
+    # Managers without destroy method
+    mock_get_nav_manager.return_value = object()
+    mock_get_tf_manager.return_value = object()
     mock_create_server.return_value = mock_server
+    mock_logger = Mock()
+    mock_setup_logging.return_value = mock_logger
 
-    # Run main
     await main()
 
-    # Verify cleanup still works
     mock_shutdown.assert_called_once()
     mock_logger.info.assert_any_call(
         'Nav2 MCP Server shutdown complete'

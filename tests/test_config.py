@@ -86,81 +86,47 @@ class TestConfigLoading:
 class TestEnvironmentVariables:
     """Tests for environment variable handling."""
 
-    @patch.dict(os.environ, {'NAV2_MCP_SERVER_NAME': 'TestServer'})
-    def test_server_name_environment_variable(self) -> None:
-        """Test server name from environment variable.
+    @patch.dict(os.environ, {'TRANSPORT_MODE': 'http'}, clear=True)
+    def test_transport_mode_environment_variable(self) -> None:
+        """Test transport mode from environment variable."""
+        config = Config()
+        assert config.server.transport == 'http'
 
-        Verifies that server name can be configured via
-        environment variable.
-        """
-        # Note: Current implementation doesn't support env vars
-        # This test verifies default behavior
-        config = get_config()
+    @patch.dict(os.environ, {'TRANSPORT_MODE': 'invalid'}, clear=True)
+    def test_invalid_transport_mode_environment_variable(self) -> None:
+        """Test invalid transport mode from environment variable."""
+        config = Config()
+        assert config.server.transport == 'stdio'  # Default value
 
-        assert config.server.server_name == 'nav2-mcp-server'
+    @patch.dict(os.environ, {'HTTP_HOST': '1.2.3.4'}, clear=True)
+    def test_http_host_environment_variable(self) -> None:
+        """Test HTTP host from environment variable."""
+        config = Config()
+        assert config.server.http_host == '1.2.3.4'
 
-    @patch.dict(os.environ, {'NAV2_MCP_LOG_LEVEL': 'DEBUG'})
+    @patch.dict(os.environ, {'HTTP_PORT': '4000'}, clear=True)
+    def test_http_port_environment_variable(self) -> None:
+        """Test HTTP port from environment variable."""
+        config = Config()
+        assert config.server.http_port == 4000
+
+    @patch.dict(os.environ, {'HTTP_PORT': 'invalid'}, clear=True)
+    def test_invalid_http_port_environment_variable(self) -> None:
+        """Test invalid HTTP port from environment variable."""
+        config = Config()
+        assert config.server.http_port == 3001  # Default value
+
+    @patch.dict(os.environ, {'LOG_LEVEL': 'DEBUG'}, clear=True)
     def test_log_level_environment_variable(self) -> None:
-        """Test log level from environment variable.
+        """Test log level from environment variable."""
+        config = Config()
+        assert config.logging.level == logging.DEBUG
 
-        Verifies that log level can be configured via
-        environment variable.
-        """
-        # Note: Current implementation doesn't support env vars
-        # This test verifies default behavior
-        config = get_config()
-
-        assert isinstance(config.logging.level, int)
-
-    @patch.dict(os.environ, {'NAV2_MCP_MAP_FRAME': 'world'})
-    def test_map_frame_environment_variable(self) -> None:
-        """Test map frame from environment variable.
-
-        Verifies that map frame can be configured via
-        environment variable.
-        """
-        # Note: Current implementation doesn't support env vars
-        # This test verifies default behavior
-        config = get_config()
-
-        assert config.navigation.map_frame == 'map'
-
-    @patch.dict(os.environ, {'NAV2_MCP_BASE_FRAME': 'robot_base'})
-    def test_base_frame_environment_variable(self) -> None:
-        """Test base frame from environment variable.
-
-        Verifies that base frame can be configured via
-        environment variable.
-        """
-        # Note: Current implementation doesn't support env vars
-        # This test verifies default behavior
-        config = get_config()
-
-        assert config.navigation.base_link_frame == 'base_link'
-
-    @patch.dict(
-        os.environ,
-        {
-            'NAV2_MCP_SERVER_NAME': 'EnvServer',
-            'NAV2_MCP_LOG_LEVEL': 'WARNING',
-            'NAV2_MCP_MAP_FRAME': 'env_map',
-            'NAV2_MCP_BASE_FRAME': 'env_base'
-        }
-    )
-    def test_multiple_environment_variables(self) -> None:
-        """Test multiple environment variables.
-
-        Verifies that multiple environment variables
-        can be set simultaneously.
-        """
-        # Note: Current implementation doesn't support env vars
-        # This test verifies default behavior
-        config = get_config()
-
-        assert config.server.server_name == 'nav2-mcp-server'
-        assert isinstance(config.logging.level, int)
-        assert config.navigation.map_frame == 'map'
-        assert config.navigation.base_link_frame == 'base_link'
+    @patch.dict(os.environ, {'LOG_LEVEL': 'INVALID'}, clear=True)
+    def test_invalid_log_level_environment_variable(self) -> None:
+        """Test invalid log level from environment variable."""
+        config = Config()
+        assert config.logging.level == logging.INFO  # Default value
 
 
 class TestConfigValidation:
@@ -198,6 +164,86 @@ class TestConfigValidation:
         assert len(config.navigation.map_frame) > 0
         assert len(config.navigation.base_link_frame) > 0
         assert len(config.logging.log_format) > 0
+
+    def test_validate_default_backup_speed(self) -> None:
+        """Test validation of default_backup_speed."""
+        with pytest.raises(ValueError, match='default_backup_speed must be positive'):
+            Config({'navigation': {'default_backup_speed': 0}})
+
+    def test_validate_default_tf_timeout(self) -> None:
+        """Test validation of default_tf_timeout."""
+        with pytest.raises(ValueError, match='default_tf_timeout must be positive'):
+            Config({'navigation': {'default_tf_timeout': 0}})
+
+    def test_validate_max_waypoints(self) -> None:
+        """Test validation of max_waypoints."""
+        with pytest.raises(ValueError, match='max_waypoints must be positive'):
+            Config({'navigation': {'max_waypoints': -1}})
+
+    def test_validate_backup_distance_limits(self) -> None:
+        """Test validation of backup distance limits."""
+        with pytest.raises(ValueError, match='min_backup_distance must be less than max_backup_distance'):
+            Config({
+                'navigation': {
+                    'min_backup_distance': 10,
+                    'max_backup_distance': 5
+                }
+            })
+
+    def test_validate_backup_speed_limits(self) -> None:
+        """Test validation of backup speed limits."""
+        with pytest.raises(ValueError, match='min_backup_speed must be less than max_backup_speed'):
+            Config({
+                'navigation': {
+                    'min_backup_speed': 1.0,
+                    'max_backup_speed': 0.5
+                }
+            })
+
+
+class TestConfigUtils:
+    """Tests for configuration utility functions."""
+
+    def test_to_dict(self) -> None:
+        """Test configuration conversion to dictionary."""
+        config = Config()
+        config_dict = config.to_dict()
+
+        assert isinstance(config_dict, dict)
+        assert 'navigation' in config_dict
+        assert 'logging' in config_dict
+        assert 'server' in config_dict
+        assert config_dict['server']['server_name'] == config.server.server_name
+
+    def test_load_config_from_dict(self) -> None:
+        """Test loading configuration from dictionary."""
+        custom_config = {
+            'server': {'server_name': 'CustomServer'},
+            'navigation': {'map_frame': 'custom_map'},
+            'logging': {'node_name': 'custom_node'}
+        }
+        config = load_config_from_dict(custom_config)
+
+        assert config.server.server_name == 'CustomServer'
+        assert config.navigation.map_frame == 'custom_map'
+        assert config.logging.node_name == 'custom_node'
+        assert get_config() == config
+
+    def test_set_config(self) -> None:
+        """Test setting the global configuration."""
+        config = Config()
+        set_config(config)
+        assert get_config() == config
+
+    def test_apply_overrides_non_existent_attr(self) -> None:
+        """Test applying overrides with non-existent attributes."""
+        # Should not raise exception, just skip non-existent attributes
+        config = Config({
+            'navigation': {'non_existent': 'value'},
+            'logging': {'invalid_attr': 'value'},
+            'server': {'unknown': 'value'}
+        })
+        assert config is not None
 
     def test_config_timeout_positive(self) -> None:
         """Test that timeout values are positive.
