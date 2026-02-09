@@ -12,6 +12,15 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 
 ![Demo of Nav2 MCP Server](docs/demo.gif)
 
+## Features
+
+* **Navigation control**: Navigate to specific poses, follow waypoint sequences, and execute precise robot movements
+* **Real-time status**: Monitor navigation progress, robot pose, and system status with comprehensive feedback
+* **Costmap management**: Clear stale obstacle data and manage navigation costmaps for optimal path planning
+* **Lifecycle management**: Control Nav2 system startup and shutdown for complete system control
+* **ROS 2 integration**: Full compatibility with Nav2 navigation stack and ROS 2 ecosystem
+* **Async operations**: Non-blocking navigation commands with progress monitoring and cancellation support
+
 ## Tools
 
 | Tool                    | Description                                                                       | Parameters                                                                                                         |
@@ -37,14 +46,38 @@ An MCP (Model Context Protocol) server that provides tools and resources to cont
 | `ROS_DOMAIN_ID`      | —       | ROS 2 domain ID for network isolation (recommended to set)   |
 | `ROS_LOCALHOST_ONLY` | —       | Set to '1' to restrict ROS 2 communication to localhost only |
 
-## Features
+## Configuration
 
-* **Navigation control**: Navigate to specific poses, follow waypoint sequences, and execute precise robot movements
-* **Real-time status**: Monitor navigation progress, robot pose, and system status with comprehensive feedback
-* **Costmap management**: Clear stale obstacle data and manage navigation costmaps for optimal path planning
-* **Lifecycle management**: Control Nav2 system startup and shutdown for complete system control
-* **ROS 2 integration**: Full compatibility with Nav2 navigation stack and ROS 2 ecosystem
-* **Async operations**: Non-blocking navigation commands with progress monitoring and cancellation support
+### Environment Variables
+
+| Variable             | Default   | Description                                                     |
+| -------------------- | --------- | --------------------------------------------------------------- |
+| `TRANSPORT_MODE`     | `stdio`   | Transport mode: `stdio` (local integration) or `http` (network) |
+| `HTTP_HOST`          | `0.0.0.0` | HTTP host binding (only used when `TRANSPORT_MODE=http`)        |
+| `HTTP_PORT`          | `3001`    | HTTP port (only used when `TRANSPORT_MODE=http`)                |
+| `LOG_LEVEL`          | `INFO`    | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`  |
+| `ROS_DOMAIN_ID`      | —         | ROS 2 domain ID for network isolation (recommended)             |
+| `ROS_LOCALHOST_ONLY` | —         | Set to '1' to restrict ROS 2 communication to localhost only    |
+
+### Setup
+
+1. Copy the environment configuration template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` to customize settings:
+```bash
+# Transport mode: 'stdio' for local, 'http' for containerized/network
+TRANSPORT_MODE=stdio
+
+# HTTP settings (only needed if using http transport)
+HTTP_HOST=0.0.0.0
+HTTP_PORT=3001
+
+# Logging
+LOG_LEVEL=INFO
+```
 
 ## Installation
 
@@ -80,7 +113,7 @@ uv add git+https://github.com/ajtudela/nav2_mcp_server.git
 Build the image:
 
 ```bash
-docker build -t nav2_mcp_server:latest .
+docker build -t nav2-mcp-server:latest .
 ```
 
 #### Pull the image
@@ -102,7 +135,7 @@ uv run nav2_mcp_server
 
 Add this configuration to your application's settings (mcp.json):
 
-#### Using uv
+#### Using uv (stdio transport)
 ```json
 {
   "nav2 mcp server": {
@@ -112,7 +145,7 @@ Add this configuration to your application's settings (mcp.json):
       "run",
       "--directory",
       "/path/to/nav2_mcp_server",
-      "nav2_mcp_server"
+      "nav2-mcp-server"
     ],
     "env": {
       "ROS_DOMAIN_ID": "0",
@@ -122,7 +155,7 @@ Add this configuration to your application's settings (mcp.json):
 }
 ```
 
-#### Using Docker
+#### Using Docker (stdio transport)
 ```json
 "nav2 mcp server": {
     "type": "stdio",
@@ -137,5 +170,17 @@ Add this configuration to your application's settings (mcp.json):
       "ROS_DOMAIN_ID": "0",
       "ROS_LOCALHOST_ONLY": "1"
     }
+}
+```
+
+#### Using HTTP transport
+```json
+"nav2 mcp server": {
+  "type": "http",
+  "url": "http://localhost:3001/mcp",
+  "env": {
+    "TRANSPORT_MODE": "http",
+    "LOG_LEVEL": "INFO"
+  }
 }
 ```

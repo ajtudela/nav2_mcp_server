@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = "==3.12.*"
 
 [[package]]
@@ -615,6 +615,7 @@ dependencies = [
     { name = "fastmcp" },
     { name = "lark" },
     { name = "numpy" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -637,6 +638,7 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=2.12.3" },
     { name = "lark", specifier = ">=1.3.0" },
     { name = "numpy", specifier = ">=2.3.0" },
+    { name = "python-dotenv", specifier = ">=1.0.1" },
 ]
 
 [package.metadata.requires-dev]

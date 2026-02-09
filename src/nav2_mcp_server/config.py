@@ -19,8 +19,11 @@ and validation for the Nav2 MCP server application.
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+
+from dotenv import load_dotenv
 
 
 @dataclass
@@ -64,6 +67,10 @@ class ServerConfig:
     # Resource URIs
     pose_uri: str = 'nav2://pose'
 
+    # HTTP transport configuration
+    http_host: str = '0.0.0.0'
+    http_port: int = 3001
+
 
 class Config:
     """Main configuration class that combines all config sections."""
@@ -80,10 +87,40 @@ class Config:
         self.logging = LoggingConfig()
         self.server = ServerConfig()
 
+        # Load environment variables from .env file if it exists
+        load_dotenv()
+
+        # Load configuration from environment variables
+        self._load_from_environment()
+
         if config_dict:
             self._apply_overrides(config_dict)
 
         self._validate()
+
+    def _load_from_environment(self) -> None:
+        """Load configuration values from environment variables."""
+        # Transport mode
+        transport = os.getenv('TRANSPORT_MODE', 'stdio')
+        if transport in ('stdio', 'http'):
+            self.server.transport = transport
+
+        # HTTP transport settings
+        if http_host := os.getenv('HTTP_HOST'):
+            self.server.http_host = http_host
+
+        if http_port := os.getenv('HTTP_PORT'):
+            try:
+                self.server.http_port = int(http_port)
+            except ValueError:
+                pass
+
+        # Logging level
+        if log_level := os.getenv('LOG_LEVEL'):
+            try:
+                self.logging.level = getattr(logging, log_level.upper())
+            except AttributeError:
+                pass
 
     def _apply_overrides(self, config_dict: Dict[str, Any]) -> None:
         """Apply configuration overrides from dictionary.

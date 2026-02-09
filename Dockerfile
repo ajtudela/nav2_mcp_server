@@ -2,14 +2,16 @@ FROM ghcr.io/alpine-ros/alpine-ros:jazzy-3.20-ros-core
 
 # ROS 2 environment variables
 ENV ROS_DISTRO=jazzy
-ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 ENV ROS_DOMAIN_ID=0
 ENV ROS_LOCALHOST_ONLY=1
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV CYCLONEDDS_URI=''
 
 # Install necessary ROS2 packages
 RUN apk add --no-cache \
     py3-pip \
     ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
     ros-${ROS_DISTRO}-rosidl-generator-py \
     ros-${ROS_DISTRO}-rosidl-typesupport-c \
     ros-${ROS_DISTRO}-rosidl-typesupport-fastrtps-c \

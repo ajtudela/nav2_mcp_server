@@ -56,18 +56,20 @@ def create_server() -> FastMCP:
 async def main() -> None:
     """Run the Nav2 MCP server.
 
-    Initializes ROS2, sets up logging, and starts the MCP server
-    with stdio transport for integration with MCP clients.
+    Initializes ROS2, sets up logging, and starts the MCP server.
+    Supports both stdio and HTTP transports based on TRANSPORT_MODE environment variable.
 
     Notes
     -----
-    - Uses stdio transport for local MCP integration
+    - Transport mode is configurable via TRANSPORT_MODE env var (default: 'stdio')
+    - HTTP mode requires HTTP_HOST and HTTP_PORT env vars
     - Configures structured logging for debugging
     - Initializes global manager instances
     - Handles graceful shutdown of ROS2 nodes
     """
     # Setup logging
     logger = setup_logging()
+    config = get_config()
     logger.info('Starting Nav2 MCP Server...')
 
     # Initialize ROS2
@@ -86,8 +88,21 @@ async def main() -> None:
 
         # Create and start MCP server
         server = create_server()
-        logger.info('Starting MCP server on stdio transport')
-        await server.run_async(transport='stdio')
+
+        # Determine transport mode
+        if config.server.transport.lower() == 'http':
+            logger.info(
+                f'Starting MCP server on HTTP transport '
+                f'({config.server.http_host}:{config.server.http_port})'
+            )
+            await server.run_async(
+                transport='http',
+                host=config.server.http_host,
+                port=config.server.http_port
+            )
+        else:
+            logger.info('Starting MCP server on stdio transport')
+            await server.run_async(transport='stdio')
 
     except KeyboardInterrupt:
         logger.info('Server interrupted by user')
