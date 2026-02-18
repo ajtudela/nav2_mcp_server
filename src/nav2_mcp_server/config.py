@@ -45,6 +45,10 @@ class NavigationConfig:
     min_backup_speed: float = 0.01
     max_backup_speed: float = 1.0
 
+    # Docking configuration
+    dock_staging_timeout: float = 30.0
+    undock_timeout: float = 30.0
+
 
 @dataclass
 class LoggingConfig:

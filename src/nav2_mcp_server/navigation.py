@@ -22,9 +22,20 @@ import json
 import math
 from typing import List, Optional
 
+import rclpy
+from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
+from rclpy.action import ActionClient
 from rclpy.duration import Duration
+
+try:
+    from opennav_docking_msgs.action import DockRobot, UndockRobot
+    DOCKING_AVAILABLE = True
+except ImportError:
+    DockRobot = None
+    UndockRobot = None
+    DOCKING_AVAILABLE = False
 
 from .config import get_config
 from .exceptions import create_navigation_error_from_result, NavigationError, NavigationErrorCode
@@ -37,6 +48,8 @@ class NavigationManager:
     def __init__(self) -> None:
         """Initialize the navigation manager."""
         self._navigator: Optional[BasicNavigator] = None
+        self._dock_client: Optional[ActionClient] = None
+        self._undock_client: Optional[ActionClient] = None
         self.config = get_config()
 
     @property
@@ -51,6 +64,38 @@ class NavigationManager:
         if self._navigator is None:
             self._navigator = BasicNavigator()
         return self._navigator
+
+    @property
+    def dock_client(self) -> Optional[ActionClient]:
+        """Get or create the dock action client.
+
+        Returns
+        -------
+        Optional[ActionClient]
+            The dock action client, or None if docking is not available.
+        """
+        if not DOCKING_AVAILABLE:
+            return None
+        if self._dock_client is None:
+            self._dock_client = ActionClient(
+                self.navigator, DockRobot, 'dock_robot')
+        return self._dock_client
+
+    @property
+    def undock_client(self) -> Optional[ActionClient]:
+        """Get or create the undock action client.
+
+        Returns
+        -------
+        Optional[ActionClient]
+            The undock action client, or None if docking is not available.
+        """
+        if not DOCKING_AVAILABLE:
+            return None
+        if self._undock_client is None:
+            self._undock_client = ActionClient(
+                self.navigator, UndockRobot, 'undock_robot')
+        return self._undock_client
 
     def create_pose_stamped(
         self, x: float, y: float, yaw: float = 0.0
@@ -528,7 +573,7 @@ class NavigationManager:
         self,
         dock_pose: Optional[PoseStamped] = None,
         dock_id: str = '',
-        dock_type: str = '',
+        dock_type: str = 'nova_carter_dock',
         nav_to_dock: bool = True,
         context_manager: Optional[MCPContextManager] = None
     ) -> str:
@@ -555,49 +600,83 @@ class NavigationManager:
         Raises
         ------
         NavigationError
-            If docking operation fails.
+            If docking operation fails or docking is not available.
         ValueError
             If neither dock_pose nor dock_id is provided.
         """
-        if dock_pose is None and not dock_id:
+        if not DOCKING_AVAILABLE:
+            raise NavigationError(
+                'Docking not available: opennav_docking_msgs package not found. '
+                'Install opennav_docking for Humble compatibility.',
+                NavigationErrorCode.ROS_ERROR,
+                {'hint': 'Install from: https://github.com/open-navigation/opennav_docking (humble branch)'}
+            )
+
+        assert DockRobot is not None
+
+        if dock_pose.pose.x == 0 and dock_pose.pose.y == 0 and not dock_id:
             raise ValueError('Either dock_pose or dock_id must be provided')
 
-        if dock_pose is not None:
-            # Dock using pose
-            self.navigator.get_logger().info(
-                f'Docking robot at pose: x={dock_pose.pose.position.x:.2f}, '
-                f'y={dock_pose.pose.position.y:.2f}'
+        if self.dock_client is None:
+            raise NavigationError(
+                'Dock action client not initialized',
+                NavigationErrorCode.ROS_ERROR,
+                {}
             )
-            if context_manager:
-                context_manager.info_sync(
-                    f'Starting dock operation at pose '
-                    f'({dock_pose.pose.position.x:.2f},\n'
-                    f' {dock_pose.pose.position.y:.2f})'
-                )
 
-            self.navigator.dockRobotByPose(dock_pose, dock_type, nav_to_dock)
+        if not self.dock_client.wait_for_server(timeout_sec=5.0):
+            raise NavigationError(
+                'Dock action server not available after 5 seconds',
+                NavigationErrorCode.ROS_ERROR,
+                {'server': 'dock_robot'}
+            )
+
+        goal = DockRobot.Goal()
+        # if dock_pose is provided and has non-zero coordinates, use it; otherwise, use dock_id
+        if dock_pose.pose.x != 0 and dock_pose.pose.y != 0:
+            goal.use_dock_id = False
+            goal.dock_pose = dock_pose
+            goal.dock_type = dock_type
             dock_description = (
-                f'pose ({dock_pose.pose.position.x:.2f},\n'
-                f'      {dock_pose.pose.position.y:.2f})'
+                f'pose ({dock_pose.pose.position.x:.2f}, '
+                f'{dock_pose.pose.position.y:.2f})'
             )
         else:
-            # Dock using ID
-            self.navigator.get_logger().info(
-                f'Docking robot at dock ID: {dock_id}')
-            if context_manager:
-                context_manager.info_sync(
-                    f'Starting dock operation at dock ID: {dock_id}')
-
-            self.navigator.dockRobotByID(dock_id, nav_to_dock)
+            goal.use_dock_id = True
+            goal.dock_id = dock_id
+            goal.dock_type = dock_type
             dock_description = f'dock ID: {dock_id}'
 
-        self._monitor_navigation_progress(context_manager, 'dock operation')
+        goal.navigate_to_staging_pose = nav_to_dock
+        #goal.max_staging_time = self.config.navigation.dock_staging_timeout
 
-        result = self.navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
+        self.navigator.get_logger().info(f'Docking robot at {dock_description}')
+        if context_manager:
+            context_manager.info_sync(f'Starting dock operation at {dock_description}')
+
+        send_goal_future = self.dock_client.send_goal_async(goal)
+        goal_handle = self._spin_until_complete(send_goal_future)
+
+        if not goal_handle.accepted:
+            raise NavigationError(
+                'Dock goal was rejected by the server',
+                NavigationErrorCode.ROS_ERROR,
+                {'dock_description': dock_description}
+            )
+
+        result_future = goal_handle.get_result_async()
+        result_wrapper = self._spin_until_complete(result_future)
+        result = result_wrapper.result
+        status = result_wrapper.status
+
+        if status == GoalStatus.STATUS_SUCCEEDED and result.success:
             return f'Successfully docked robot at {dock_description}'
         else:
-            raise create_navigation_error_from_result(result, 'Dock operation')
+            raise NavigationError(
+                f'Dock operation failed with error code {result.error_code}',
+                NavigationErrorCode.ROS_ERROR,
+                {'error_code': result.error_code, 'num_retries': result.num_retries}
+            )
 
     def undock_robot(
         self,
@@ -621,28 +700,92 @@ class NavigationManager:
         Raises
         ------
         NavigationError
-            If undocking operation fails.
+            If undocking operation fails or docking is not available.
         """
+        if not DOCKING_AVAILABLE:
+            raise NavigationError(
+                'Undocking not available: opennav_docking_msgs package not found. '
+                'Install opennav_docking for Humble compatibility.',
+                NavigationErrorCode.ROS_ERROR,
+                {'hint': 'Install from: https://github.com/open-navigation/opennav_docking (humble branch)'}
+            )
+
+        assert UndockRobot is not None
+
+        if self.undock_client is None:
+            raise NavigationError(
+                'Undock action client not initialized',
+                NavigationErrorCode.ROS_ERROR,
+                {}
+            )
+
+        if not self.undock_client.wait_for_server(timeout_sec=5.0):
+            raise NavigationError(
+                'Undock action server not available after 5 seconds',
+                NavigationErrorCode.ROS_ERROR,
+                {'server': 'undock_robot'}
+            )
+
+        goal = UndockRobot.Goal()
+        goal.dock_type = dock_type
+        goal.max_undocking_time = self.config.navigation.undock_timeout
+
         self.navigator.get_logger().info('Undocking robot from dock')
         if context_manager:
             context_manager.info_sync('Starting undock operation')
 
-        self.navigator.undockRobot(dock_type)
-        self._monitor_navigation_progress(context_manager, 'undock operation')
+        send_goal_future = self.undock_client.send_goal_async(goal)
+        goal_handle = self._spin_until_complete(send_goal_future)
 
-        result = self.navigator.getResult()
-        if result == TaskResult.SUCCEEDED:
+        if not goal_handle.accepted:
+            raise NavigationError(
+                'Undock goal was rejected by the server',
+                NavigationErrorCode.ROS_ERROR,
+                {}
+            )
+
+        result_future = goal_handle.get_result_async()
+        result_wrapper = self._spin_until_complete(result_future)
+        result = result_wrapper.result
+        status = result_wrapper.status
+
+        if status == GoalStatus.STATUS_SUCCEEDED and result.success:
             dock_type_desc = f' (type: {dock_type})' if dock_type else ''
             return f'Successfully undocked robot{dock_type_desc}'
         else:
-            raise create_navigation_error_from_result(
-                result, 'Undock operation')
+            raise NavigationError(
+                f'Undock operation failed with error code {result.error_code}',
+                NavigationErrorCode.ROS_ERROR,
+                {'error_code': result.error_code}
+            )
 
     def destroy(self) -> None:
         """Clean up navigator resources."""
+        if self._dock_client:
+            self._dock_client.destroy()
+            self._dock_client = None
+        if self._undock_client:
+            self._undock_client.destroy()
+            self._undock_client = None
         if self._navigator:
             self._navigator.destroy_node()
             self._navigator = None
+
+    def _spin_until_complete(self, future):
+        """Spin the node until a future is complete.
+
+        Parameters
+        ----------
+        future : rclpy.Future
+            The future to wait for.
+
+        Returns
+        -------
+        The result of the future.
+        """
+        while not future.done():
+            rclpy.spin_once(self.navigator, timeout_sec=0.1)
+        return future.result()
 
     def _monitor_navigation_progress(
         self, context_manager: MCPContextManager, operation_name: str
