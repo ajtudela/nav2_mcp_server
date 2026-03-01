@@ -614,7 +614,7 @@ class NavigationManager:
 
         assert DockRobot is not None
 
-        if dock_pose.pose.x == 0 and dock_pose.pose.y == 0 and not dock_id:
+        if dock_pose is None and not dock_id:
             raise ValueError('Either dock_pose or dock_id must be provided')
 
         if self.dock_client is None:
@@ -633,7 +633,7 @@ class NavigationManager:
 
         goal = DockRobot.Goal()
         # if dock_pose is provided and has non-zero coordinates, use it; otherwise, use dock_id
-        if dock_pose.pose.x != 0 and dock_pose.pose.y != 0:
+        if dock_pose is not None and dock_pose.pose.position.x != 0 and dock_pose.pose.position.y != 0:
             goal.use_dock_id = False
             goal.dock_pose = dock_pose
             goal.dock_type = dock_type

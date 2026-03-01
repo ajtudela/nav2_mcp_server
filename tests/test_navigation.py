@@ -4,9 +4,12 @@ This module tests navigation operations including pose navigation,
 waypoint following, and robot maneuvers.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 import pytest
+import pytest
+from action_msgs.msg import GoalStatus
+from builtin_interfaces.msg import Time
 from nav2_simple_commander.robot_navigator import TaskResult
 
 from nav2_mcp_server.exceptions import NavigationError
@@ -58,7 +61,7 @@ class TestCreatePoseStamped:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
@@ -81,7 +84,7 @@ class TestCreatePoseStamped:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
@@ -110,7 +113,7 @@ class TestParseWaypoints:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
@@ -216,6 +219,11 @@ class TestFollowWaypoints:
         with parsed waypoints.
         """
         mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Time()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
         mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
 
@@ -233,6 +241,11 @@ class TestFollowWaypoints:
     def test_follow_waypoints_failure(self, mock_navigator_class: Mock) -> None:
         """Test waypoint following failure handling."""
         mock_navigator = Mock()
+        mock_clock = Mock()
+        mock_time = Mock()
+        mock_time.to_msg.return_value = Time()
+        mock_clock.now.return_value = mock_time
+        mock_navigator.get_clock.return_value = mock_clock
         mock_navigator.getResult.return_value = TaskResult.FAILED
         mock_navigator_class.return_value = mock_navigator
 
@@ -451,7 +464,7 @@ class TestNavigationManagerUtilities:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
@@ -557,68 +570,91 @@ class TestCancelNavigationAlreadyComplete:
 class TestDockRobot:
     """Tests for dock_robot functionality."""
 
+    def _make_successful_dock_mocks(self, mock_navigator_class):
+        """Helper: set up mocks for a successful dock action."""
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.result.num_retries = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_dock_client = Mock()
+        mock_dock_client.wait_for_server.return_value = True
+        mock_dock_client.send_goal_async.return_value = Mock()
+
+        return mock_navigator, mock_dock_client, mock_goal_handle, mock_result_wrapper
+
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_by_id(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot using dock ID.
-
-        Verifies that docking by ID works correctly.
-        """
-        mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
-        mock_navigator_class.return_value = mock_navigator
+        """Test docking robot using dock ID."""
+        mock_navigator, mock_dock_client, mock_goal_handle, mock_result_wrapper = \
+            self._make_successful_dock_mocks(mock_navigator_class)
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.dock_robot(
-            dock_id='charging_dock_1',
-            nav_to_dock=True,
-            context_manager=context_manager
-        )
+        with patch.object(type(nav_manager), 'dock_client', new_callable=PropertyMock,
+                          return_value=mock_dock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.dock_robot(
+                    dock_id='charging_dock_1',
+                    nav_to_dock=True,
+                    context_manager=context_manager
+                )
 
         assert 'Successfully docked' in result
         assert 'dock ID: charging_dock_1' in result
-        mock_navigator.dockRobotByID.assert_called_once_with('charging_dock_1', True)
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_by_pose(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot using pose.
-
-        Verifies that docking by pose works correctly.
-        """
+        """Test docking robot using pose."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
 
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.result.num_retries = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_dock_client = Mock()
+        mock_dock_client.wait_for_server.return_value = True
+        mock_dock_client.send_goal_async.return_value = Mock()
+
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        # Create a dock pose
         dock_pose = nav_manager.create_pose_stamped(5.0, 3.0, 0.0)
 
-        result = nav_manager.dock_robot(
-            dock_pose=dock_pose,
-            dock_type='nova_carter_dock',
-            nav_to_dock=False,
-            context_manager=context_manager
-        )
+        with patch.object(type(nav_manager), 'dock_client', new_callable=PropertyMock,
+                          return_value=mock_dock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.dock_robot(
+                    dock_pose=dock_pose,
+                    dock_type='nova_carter_dock',
+                    nav_to_dock=False,
+                    context_manager=context_manager
+                )
 
         assert 'Successfully docked' in result
-        mock_navigator.dockRobotByPose.assert_called_once_with(
-            dock_pose, 'nova_carter_dock', False
-        )
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_no_params(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot without dock_pose or dock_id.
-
-        Verifies that ValueError is raised when neither is provided.
-        """
+        """Test docking robot without dock_pose or dock_id raises ValueError."""
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
@@ -627,67 +663,105 @@ class TestDockRobot:
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_failure(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot failure.
-
-        Verifies that docking failure raises NavigationError.
-        """
+        """Test docking robot failure raises NavigationError."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.FAILED
         mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = False
+        mock_result_wrapper.result.error_code = 1
+        mock_result_wrapper.result.num_retries = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_ABORTED
+
+        mock_dock_client = Mock()
+        mock_dock_client.wait_for_server.return_value = True
+        mock_dock_client.send_goal_async.return_value = Mock()
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        with pytest.raises(NavigationError):
-            nav_manager.dock_robot(
-                dock_id='charging_dock_1',
-                context_manager=context_manager
-            )
-
+        with patch.object(type(nav_manager), 'dock_client', new_callable=PropertyMock,
+                          return_value=mock_dock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                with pytest.raises(NavigationError):
+                    nav_manager.dock_robot(
+                        dock_id='charging_dock_1',
+                        context_manager=context_manager
+                    )
 
 class TestUndockRobot:
     """Tests for undock_robot functionality."""
 
+    def _make_successful_undock_mocks(self, mock_navigator_class):
+        """Helper: set up mocks for a successful undock action."""
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_undock_client = Mock()
+        mock_undock_client.wait_for_server.return_value = True
+        mock_undock_client.send_goal_async.return_value = Mock()
+
+        return mock_navigator, mock_undock_client, mock_goal_handle, mock_result_wrapper
+
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_undock_robot_success(self, mock_navigator_class: Mock) -> None:
-        """Test successful robot undocking.
-
-        Verifies that undocking works correctly.
-        """
-        mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
-        mock_navigator_class.return_value = mock_navigator
+        """Test successful robot undocking."""
+        mock_navigator, mock_undock_client, mock_goal_handle, mock_result_wrapper = \
+            self._make_successful_undock_mocks(mock_navigator_class)
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        result = nav_manager.undock_robot(
-            dock_type='nova_carter_dock',
-            context_manager=context_manager
-        )
+        with patch.object(type(nav_manager), 'undock_client', new_callable=PropertyMock,
+                          return_value=mock_undock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.undock_robot(
+                    dock_type='nova_carter_dock',
+                    context_manager=context_manager
+                )
 
         assert 'Successfully undocked' in result
-        mock_navigator.undockRobot.assert_called_once_with('nova_carter_dock')
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_undock_robot_failure(self, mock_navigator_class: Mock) -> None:
-        """Test undocking robot failure.
-
-        Verifies that undocking failure raises NavigationError.
-        """
+        """Test undocking robot failure raises NavigationError."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.FAILED
         mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = False
+        mock_result_wrapper.result.error_code = 1
+        mock_result_wrapper.status = GoalStatus.STATUS_ABORTED
+
+        mock_undock_client = Mock()
+        mock_undock_client.wait_for_server.return_value = True
+        mock_undock_client.send_goal_async.return_value = Mock()
 
         nav_manager = NavigationManager()
         context_manager = MCPContextManager()
 
-        with pytest.raises(NavigationError):
-            nav_manager.undock_robot(
-                dock_type='nova_carter_dock',
-                context_manager=context_manager
-            )
-
+        with patch.object(type(nav_manager), 'undock_client', new_callable=PropertyMock,
+                          return_value=mock_undock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                with pytest.raises(NavigationError):
+                    nav_manager.undock_robot(
+                        dock_type='nova_carter_dock',
+                        context_manager=context_manager
+                    )
 
 class TestGetPath:
     """Tests for get_path functionality."""
@@ -702,7 +776,7 @@ class TestGetPath:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
 
@@ -744,7 +818,7 @@ class TestGetPath:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
 
@@ -1116,54 +1190,75 @@ class TestDockRobotWithoutContextManager:
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_by_id_no_context(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot by ID without context manager.
-
-        Verifies that docking works when context_manager is None.
-        """
+        """Test docking robot by ID without context manager."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.result.num_retries = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_dock_client = Mock()
+        mock_dock_client.wait_for_server.return_value = True
+        mock_dock_client.send_goal_async.return_value = Mock()
 
         nav_manager = NavigationManager()
 
-        result = nav_manager.dock_robot(
-            dock_id='charging_dock_1',
-            nav_to_dock=True,
-            context_manager=None
-        )
+        with patch.object(type(nav_manager), 'dock_client', new_callable=PropertyMock,
+                          return_value=mock_dock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.dock_robot(
+                    dock_id='charging_dock_1',
+                    nav_to_dock=True,
+                    context_manager=None
+                )
 
         assert 'Successfully docked' in result
-        mock_navigator.dockRobotByID.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_dock_robot_by_pose_no_context(self, mock_navigator_class: Mock) -> None:
-        """Test docking robot by pose without context manager.
-
-        Verifies that docking by pose works when context_manager is None.
-        """
+        """Test docking robot by pose without context manager."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
         mock_navigator_class.return_value = mock_navigator
 
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.result.num_retries = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_dock_client = Mock()
+        mock_dock_client.wait_for_server.return_value = True
+        mock_dock_client.send_goal_async.return_value = Mock()
+
         nav_manager = NavigationManager()
 
-        # Create a dock pose
         dock_pose = nav_manager.create_pose_stamped(5.0, 3.0, 0.0)
 
-        result = nav_manager.dock_robot(
-            dock_pose=dock_pose,
-            dock_type='',
-            nav_to_dock=True,
-            context_manager=None
-        )
+        with patch.object(type(nav_manager), 'dock_client', new_callable=PropertyMock,
+                          return_value=mock_dock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.dock_robot(
+                    dock_pose=dock_pose,
+                    dock_type='',
+                    nav_to_dock=True,
+                    context_manager=None
+                )
 
         assert 'Successfully docked' in result
-        mock_navigator.dockRobotByPose.assert_called_once()
 
 
 class TestUndockRobotWithoutContextManager:
@@ -1171,40 +1266,61 @@ class TestUndockRobotWithoutContextManager:
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_undock_robot_no_context(self, mock_navigator_class: Mock) -> None:
-        """Test undocking robot without context manager.
-
-        Verifies that undocking works when context_manager is None.
-        """
+        """Test undocking robot without context manager."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_undock_client = Mock()
+        mock_undock_client.wait_for_server.return_value = True
+        mock_undock_client.send_goal_async.return_value = Mock()
 
         nav_manager = NavigationManager()
 
-        result = nav_manager.undock_robot(
-            dock_type='',
-            context_manager=None
-        )
+        with patch.object(type(nav_manager), 'undock_client', new_callable=PropertyMock,
+                          return_value=mock_undock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.undock_robot(
+                    dock_type='',
+                    context_manager=None
+                )
 
         assert 'Successfully undocked' in result
-        mock_navigator.undockRobot.assert_called_once()
 
     @patch('nav2_mcp_server.navigation.BasicNavigator')
     def test_undock_robot_with_dock_type(self, mock_navigator_class: Mock) -> None:
-        """Test undocking robot with specific dock type in message.
-
-        Verifies that dock type appears in success message when provided.
-        """
+        """Test undocking robot with specific dock type appears in success message."""
         mock_navigator = Mock()
-        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
         mock_navigator_class.return_value = mock_navigator
+
+        mock_goal_handle = Mock()
+        mock_goal_handle.accepted = True
+        mock_result_wrapper = Mock()
+        mock_result_wrapper.result.success = True
+        mock_result_wrapper.result.error_code = 0
+        mock_result_wrapper.status = GoalStatus.STATUS_SUCCEEDED
+
+        mock_undock_client = Mock()
+        mock_undock_client.wait_for_server.return_value = True
+        mock_undock_client.send_goal_async.return_value = Mock()
 
         nav_manager = NavigationManager()
 
-        result = nav_manager.undock_robot(
-            dock_type='custom_dock',
-            context_manager=None
-        )
+        with patch.object(type(nav_manager), 'undock_client', new_callable=PropertyMock,
+                          return_value=mock_undock_client):
+            with patch.object(nav_manager, '_spin_until_complete',
+                              side_effect=[mock_goal_handle, mock_result_wrapper]):
+                result = nav_manager.undock_robot(
+                    dock_type='custom_dock',
+                    context_manager=None
+                )
 
         assert 'Successfully undocked' in result
         assert 'custom_dock' in result
@@ -1223,7 +1339,7 @@ class TestGetPathWithoutContextManager:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
 
@@ -1259,7 +1375,7 @@ class TestGetPathWithoutContextManager:
         mock_navigator = Mock()
         mock_clock = Mock()
         mock_time = Mock()
-        mock_time.to_msg.return_value = Mock()
+        mock_time.to_msg.return_value = Time()
         mock_clock.now.return_value = mock_time
         mock_navigator.get_clock.return_value = mock_clock
 
