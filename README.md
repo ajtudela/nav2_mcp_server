@@ -1,6 +1,6 @@
 # Nav2 MCP Server
 
-![ROS2](https://img.shields.io/badge/ros2-jazzy-blue?logo=ros&logoColor=white)
+![ROS2](https://img.shields.io/badge/ros2-humble-blue?logo=ros&logoColor=white)
 ![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)
 [![Build](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml)
 [![Docker image](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml)
