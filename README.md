@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/github/license/ajtudela/nav2_mcp_server)
 [![Build](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/python-package.yml)
 [![Docker image](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml/badge.svg?branch=main)](https://github.com/ajtudela/nav2_mcp_server/actions/workflows/docker_image.yml)
-![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fajtudela%2Fnav2_mcp_server%2Frefs%2Fheads%2Fmain%2Fpyproject.toml)
+![Python](https://img.shields.io/badge/python-3.10%20%20%7C%203.11-blue)
 ![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fajtudela%2Fnav2_mcp_server%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&query=%24.project.dependencies%5B2%5D&label=dependency)
 [![codecov](https://codecov.io/gh/ajtudela/nav2_mcp_server/graph/badge.svg?token=munojKDLxe)](https://codecov.io/gh/ajtudela/nav2_mcp_server)
 
@@ -83,7 +83,7 @@ LOG_LEVEL=INFO
 
 ### Dependencies
 
-- [Robot Operating System (ROS) 2](https://docs.ros.org/en/jazzy/): Middleware for robotics (Jazzy)
+- [Robot Operating System (ROS) 2](https://docs.ros.org/en/humble/): Middleware for robotics (Humble)
 - [fastmcp](https://github.com/jlowin/fastmcp): MCP server framework
 - [python](https://www.python.org/): Python programming language
 - [uv](https://github.com/astral-sh/uv): Python package manager (optional)
