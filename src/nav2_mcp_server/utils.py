@@ -21,6 +21,7 @@ and common async/sync operations.
 import functools
 import json
 import logging
+import threading
 from typing import Any, Callable, Dict, Optional, TypeVar
 
 import anyio
@@ -30,6 +31,18 @@ from .config import get_config
 from .exceptions import Nav2MCPError, ROSError
 
 F = TypeVar('F', bound=Callable[..., Any])
+
+# Process-wide lock serializing all nav2-mcp tool entry points.
+#
+# Why: BasicNavigator (in navigation.py) and TransformManager (in
+# transforms.py) each create their own rclpy nodes and call spin
+# primitives. rclpy 2.x raises "Executor is already spinning" when two
+# threads try to spin overlapping. With FastMCP's HTTP/STDIO transports
+# both dispatching tool calls on a thread pool, two tool calls can race
+# on the executor and one fails. Serializing all tool calls behind this
+# lock costs throughput we don't have anyway (single-robot, sequential
+# operations) and eliminates the race.
+_ROS_LOCK = threading.Lock()
 
 
 class MCPContextManager:
@@ -157,17 +170,19 @@ def with_context_logging(func: F) -> F:
         # Add context manager to kwargs
         kwargs['context_manager'] = context_manager
 
-        try:
-            return func(*args, **kwargs)
-        except Nav2MCPError as e:
-            error_msg = f'Navigation error in {func.__name__}: {e.message}'
-            context_manager.error_sync(error_msg)
-            return json.dumps(e.to_dict(), indent=2)
-        except Exception as e:
-            error_msg = f'Unexpected error in {func.__name__}: {str(e)}'
-            context_manager.error_sync(error_msg)
-            ros_error = ROSError(error_msg, e)
-            return json.dumps(ros_error.to_dict(), indent=2)
+        # Serialize all rclpy access. See _ROS_LOCK comment above.
+        with _ROS_LOCK:
+            try:
+                return func(*args, **kwargs)
+            except Nav2MCPError as e:
+                error_msg = f'Navigation error in {func.__name__}: {e.message}'
+                context_manager.error_sync(error_msg)
+                return json.dumps(e.to_dict(), indent=2)
+            except Exception as e:
+                error_msg = f'Unexpected error in {func.__name__}: {str(e)}'
+                context_manager.error_sync(error_msg)
+                ros_error = ROSError(error_msg, e)
+                return json.dumps(ros_error.to_dict(), indent=2)
 
     return wrapper  # type: ignore[return-value]
 
