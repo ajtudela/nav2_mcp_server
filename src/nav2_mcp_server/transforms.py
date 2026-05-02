@@ -19,9 +19,12 @@ and robot pose operations.
 """
 
 import math
+import threading
+import time
 from typing import Any, Dict, Optional
 
 import rclpy
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
 from tf2_ros import Buffer, TransformException, TransformListener
 
@@ -39,13 +42,47 @@ class TransformManager:
         self._node: Optional[Node] = None
         self._tf_buffer: Optional[Buffer] = None
         self._tf_listener: Optional[TransformListener] = None
+        self._spin_executor: Optional[SingleThreadedExecutor] = None
+        self._spin_thread: Optional[threading.Thread] = None
+        self._spin_stop = threading.Event()
 
     def _ensure_tf_setup(self) -> None:
-        """Ensure TF components are initialized."""
+        """Ensure TF components are initialized.
+
+        Starts a daemon thread with a DEDICATED SingleThreadedExecutor
+        that continuously spins the TF node so the buffer stays
+        current with incoming /tf messages. Without continuous
+        spinning the buffer holds stale (minutes-old) data.
+
+        Why a dedicated executor: rclpy's default executor (used by
+        nav2 actions and other tools) raises `Executor is already
+        spinning` if two threads try to spin concurrently. A
+        SingleThreadedExecutor scoped to ONLY the TF node lets the
+        spinner run without conflicting with nav2's executor.
+        """
         if self._node is None:
             self._node = Node(self.config.logging.tf_node_name)
             self._tf_buffer = Buffer()
             self._tf_listener = TransformListener(self._tf_buffer, self._node)
+
+            # Dedicated executor for THIS node only — avoids conflict
+            # with the default executor that nav2 actions spin on.
+            self._spin_executor = SingleThreadedExecutor()
+            self._spin_executor.add_node(self._node)
+
+            # Background spinner — keeps /tf callbacks flowing into buffer
+            def _spin_loop() -> None:
+                while not self._spin_stop.is_set() and rclpy.ok():
+                    try:
+                        self._spin_executor.spin_once(timeout_sec=0.1)
+                    except Exception:
+                        # Executor or node shutting down; exit loop
+                        return
+
+            self._spin_thread = threading.Thread(
+                target=_spin_loop, daemon=True, name='tf_spinner'
+            )
+            self._spin_thread.start()
 
     def get_robot_pose(
         self, context_manager: MCPContextManager
@@ -80,14 +117,13 @@ class TransformManager:
             )
 
         try:
-            # Wait for transform to become available
+            # Wait for transform to become available. The background
+            # spinner thread (started in _ensure_tf_setup) keeps the
+            # buffer current; we just wait for the chain to be
+            # ready. ~5s max wall-time should be plenty.
             transform = None
-            while transform is None:
-                rclpy.spin_once(
-                    self._node,
-                    timeout_sec=self.config.navigation.default_tf_timeout
-                )
-
+            deadline_iters = 50
+            for _ in range(deadline_iters):
                 if self._tf_buffer.can_transform(
                     self.config.navigation.map_frame,
                     self.config.navigation.base_link_frame,
@@ -99,6 +135,9 @@ class TransformManager:
                         rclpy.time.Time(),  # get latest available transform
                     )
                     break
+                # Sleep briefly while the daemon spinner processes
+                # callbacks; don't spin here (would race with daemon).
+                time.sleep(0.1)
 
             if transform is None:
                 raise TransformError(
