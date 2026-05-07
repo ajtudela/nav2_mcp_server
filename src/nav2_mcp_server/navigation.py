@@ -398,6 +398,79 @@ class NavigationManager:
             raise create_navigation_error_from_result(
                 result, 'Drive on heading operation')
 
+    def approach_target(
+        self,
+        target_x_base: float,
+        target_y_base: float,
+        standoff_m: float,
+        speed: float,
+        context_manager: MCPContextManager,
+    ) -> str:
+        """Drive the robot to ``standoff_m`` from a target given in base_footprint.
+
+        Given a target's xy in base_footprint frame, spin to face the target
+        if the bearing is significant, then drive forward by
+        ``dist - standoff_m`` along the now-aligned heading using
+        ``drive_on_heading``. Returns immediately if the target is already
+        within ``standoff_m + 0.10m``.
+
+        The caller is responsible for any post-approach perception check.
+        This method does not re-verify the target position after driving.
+
+        Parameters
+        ----------
+        target_x_base : float
+            Target x in the robot's base_footprint frame (forward = +x).
+        target_y_base : float
+            Target y in the robot's base_footprint frame (left = +y).
+        standoff_m : float
+            Desired distance from the target after the approach.
+        speed : float
+            Forward drive speed in m/s.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Summary of what was executed.
+        """
+        target_dist = math.hypot(target_x_base, target_y_base)
+        bearing = math.atan2(target_y_base, target_x_base)
+
+        self.navigator.get_logger().info(
+            f'approach_target: base=({target_x_base:.2f},{target_y_base:.2f}) '
+            f'dist={target_dist:.2f}m bearing={math.degrees(bearing):.1f}deg '
+            f'standoff={standoff_m:.2f}m'
+        )
+        context_manager.info_sync(
+            f'approach_target: dist={target_dist:.2f}m -> standoff={standoff_m:.2f}m'
+        )
+
+        # Already within standoff (with 10cm tolerance). Don't drive — that
+        # would back away from a target the manipulator can already reach.
+        if target_dist <= standoff_m + 0.10:
+            return (
+                f'Already at {target_dist:.2f}m (<= standoff '
+                f'{standoff_m:.2f}m + 0.10m); no approach needed'
+            )
+
+        # Spin to face the target if the bearing is significant. ~8 deg
+        # threshold avoids burning a spin call on near-aligned targets.
+        if abs(bearing) > math.radians(8):
+            self.spin_robot(bearing, context_manager)
+
+        # Drive forward by (dist - standoff) along the now-aligned heading.
+        # Range validation, action-server check, and result handling all
+        # live in drive_on_heading.
+        drive_dist = max(target_dist - standoff_m, 0.20)
+        self.drive_on_heading(drive_dist, speed, context_manager)
+
+        return (
+            f'Approached target: spun {math.degrees(bearing):.1f}deg, '
+            f'drove {drive_dist:.2f}m -> ~{standoff_m:.2f}m standoff'
+        )
+
     def clear_costmaps(
         self, costmap_type: str, context_manager: MCPContextManager
     ) -> str:

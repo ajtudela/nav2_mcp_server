@@ -208,6 +208,57 @@ def create_mcp_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool(
+        name='approach_target',
+        description="""Drive the robot to a desired standoff distance from a
+        target whose xy is given in base_footprint frame. Spins to face the
+        target if the bearing is significant, then drives forward by
+        (target_distance - standoff). Returns immediately if the target is
+        already within standoff + 10 cm.
+
+        The caller supplies the target xy (e.g. from a perception
+        pipeline's object centroid in base_footprint frame). This tool
+        does NOT re-verify after the approach.
+
+        Example usage:
+        - approach a target at (0.95, -0.10) in base frame to 0.85 m standoff
+        - drive in to 0.45 m for surface placement
+        """,
+        tags={'approach', 'standoff', 'creep', 'drive', 'target'},
+        annotations={
+            'title': 'Approach Target At Standoff',
+            'readOnlyHint': False,
+            'openWorldHint': False
+        },
+    )
+    async def approach_target(
+        target_x_base: Annotated[
+            float,
+            'Target x in base_footprint frame (forward = +x)'
+        ],
+        target_y_base: Annotated[
+            float,
+            'Target y in base_footprint frame (left = +y)'
+        ],
+        standoff_m: Annotated[
+            float,
+            'Desired distance from target after approach (m); '
+            'choose based on your manipulator reach'
+        ],
+        speed: Annotated[
+            Optional[float],
+            'Forward drive speed in m/s (typically 0.1-0.5)'
+        ] = None,
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Approach a base-frame target to a desired standoff distance."""
+        if speed is None:
+            speed = config.navigation.default_backup_speed
+        return await anyio.to_thread.run_sync(
+            _approach_target_sync,
+            target_x_base, target_y_base, standoff_m, speed, ctx,
+        )
+
+    @mcp.tool(
         name='dock_robot',
         description="""Dock the robot to a charging station or dock.
 
@@ -525,6 +576,23 @@ def _drive_on_heading_sync(
     """Drive robot on heading synchronously."""
     nav_manager = get_navigation_manager()
     return nav_manager.drive_on_heading(distance, speed, context_manager)
+
+
+@with_context_logging
+# @with_nav2_active_check
+def _approach_target_sync(
+    target_x_base: float,
+    target_y_base: float,
+    standoff_m: float,
+    speed: float,
+    ctx: Optional[Context] = None,
+    context_manager: Optional[MCPContextManager] = None,
+) -> str:
+    """Approach a base-frame target synchronously."""
+    nav_manager = get_navigation_manager()
+    return nav_manager.approach_target(
+        target_x_base, target_y_base, standoff_m, speed, context_manager,
+    )
 
 
 @with_context_logging
