@@ -334,6 +334,70 @@ class NavigationManager:
             raise create_navigation_error_from_result(
                 result, 'Backup operation')
 
+    def drive_on_heading(
+        self, distance: float, speed: float, context_manager: MCPContextManager
+    ) -> str:
+        """Drive robot forward by specified distance on its current heading.
+
+        Parameters
+        ----------
+        distance : float
+            Distance to drive forward in meters (positive value).
+        speed : float
+            Forward speed in m/s.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Success message with distance.
+
+        Raises
+        ------
+        NavigationError
+            If drive operation fails.
+        ValueError
+            If distance or speed parameters are invalid.
+        """
+        # Reuse backup limits (physical motion limits, direction-agnostic)
+        validate_numeric_range(
+            distance,
+            self.config.navigation.min_backup_distance,
+            self.config.navigation.max_backup_distance,
+            'distance'
+        )
+        validate_numeric_range(
+            speed,
+            self.config.navigation.min_backup_speed,
+            self.config.navigation.max_backup_speed,
+            'speed'
+        )
+
+        time_allowance = int(distance / speed + 5)
+
+        self.navigator.get_logger().info(
+            f'Driving robot on heading: {distance:.2f}m at {speed:.2f}m/s'
+        )
+        context_manager.info_sync(
+            f'Starting drive on heading: {distance:.2f}m at {speed:.2f}m/s'
+        )
+
+        self._ensure_action_server(
+            self.navigator.drive_on_heading_client, '/drive_on_heading'
+        )
+        self.navigator.driveOnHeading(distance, speed, time_allowance)
+        self._monitor_navigation_progress(
+            context_manager, 'drive on heading operation'
+        )
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            return f'Successfully drove {distance:.2f} meters on heading'
+        else:
+            raise create_navigation_error_from_result(
+                result, 'Drive on heading operation')
+
     def clear_costmaps(
         self, costmap_type: str, context_manager: MCPContextManager
     ) -> str:

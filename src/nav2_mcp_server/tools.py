@@ -174,6 +174,40 @@ def create_mcp_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool(
+        name='drive_on_heading',
+        description="""Move the robot forward by a specified distance along
+        its current heading.
+
+        Example usage:
+        - drive forward 0.5 meters at 0.2 m/s
+        - move robot 1 meter on heading
+        - drive on heading 0.3 meters slowly
+        """,
+        tags={'drive', 'forward', 'on heading', 'move forward'},
+        annotations={
+            'title': 'Drive On Heading',
+            'readOnlyHint': False,
+            'openWorldHint': False
+        },
+    )
+    async def drive_on_heading(
+        distance: Annotated[
+            float, 'Distance to drive forward in meters (positive value)'
+        ],
+        speed: Annotated[
+            Optional[float],
+            'Forward speed in m/s (typically 0.1-0.5)'
+        ] = None,
+        ctx: Annotated[Optional[Context], 'MCP context for logging'] = None,
+    ) -> str:
+        """Drive the robot forward in a straight line along current heading."""
+        if speed is None:
+            speed = config.navigation.default_backup_speed
+        return await anyio.to_thread.run_sync(
+            _drive_on_heading_sync, distance, speed, ctx
+        )
+
+    @mcp.tool(
         name='dock_robot',
         description="""Dock the robot to a charging station or dock.
 
@@ -479,6 +513,18 @@ def _backup_robot_sync(
     """Back up robot synchronously."""
     nav_manager = get_navigation_manager()
     return nav_manager.backup_robot(distance, speed, context_manager)
+
+
+@with_context_logging
+# @with_nav2_active_check
+def _drive_on_heading_sync(
+    distance: float, speed: float,
+    ctx: Optional[Context] = None,
+    context_manager: Optional[MCPContextManager] = None
+) -> str:
+    """Drive robot on heading synchronously."""
+    nav_manager = get_navigation_manager()
+    return nav_manager.drive_on_heading(distance, speed, context_manager)
 
 
 @with_context_logging
