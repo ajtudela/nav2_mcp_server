@@ -182,6 +182,9 @@ class NavigationManager:
             f'Navigating to pose: x={x:.2f}, y={y:.2f}, yaw={yaw:.2f}'
         )
 
+        self._ensure_action_server(
+            self.navigator.nav_to_pose_client, '/navigate_to_pose'
+        )
         self.navigator.goToPose(goal_pose)
         self._monitor_navigation_progress(context_manager, 'pose navigation')
 
@@ -222,6 +225,9 @@ class NavigationManager:
             f'Starting waypoint following with {len(poses)} points'
         )
 
+        self._ensure_action_server(
+            self.navigator.follow_waypoints_client, '/follow_waypoints'
+        )
         self.navigator.followWaypoints(poses)
         self._monitor_waypoint_progress(context_manager)
 
@@ -260,6 +266,7 @@ class NavigationManager:
         context_manager.info_sync(
             f'Starting spin operation: {angle:.2f} radians')
 
+        self._ensure_action_server(self.navigator.spin_client, '/spin')
         self.navigator.spin(angle)
         self._monitor_navigation_progress(context_manager, 'spin operation')
 
@@ -316,6 +323,7 @@ class NavigationManager:
             f'Starting backup: {distance:.2f}m at {speed:.2f}m/s'
         )
 
+        self._ensure_action_server(self.navigator.backup_client, '/backup')
         self.navigator.backup(distance, speed)
         self._monitor_navigation_progress(context_manager, 'backup operation')
 
@@ -575,6 +583,9 @@ class NavigationManager:
                     f' {dock_pose.pose.position.y:.2f})'
                 )
 
+            self._ensure_action_server(
+                self.navigator.docking_client, '/dock_robot'
+            )
             self.navigator.dockRobotByPose(dock_pose, dock_type, nav_to_dock)
             dock_description = (
                 f'pose ({dock_pose.pose.position.x:.2f},\n'
@@ -588,6 +599,9 @@ class NavigationManager:
                 context_manager.info_sync(
                     f'Starting dock operation at dock ID: {dock_id}')
 
+            self._ensure_action_server(
+                self.navigator.docking_client, '/dock_robot'
+            )
             self.navigator.dockRobotByID(dock_id, nav_to_dock)
             dock_description = f'dock ID: {dock_id}'
 
@@ -627,6 +641,9 @@ class NavigationManager:
         if context_manager:
             context_manager.info_sync('Starting undock operation')
 
+        self._ensure_action_server(
+            self.navigator.undocking_client, '/undock_robot'
+        )
         self.navigator.undockRobot(dock_type)
         self._monitor_navigation_progress(context_manager, 'undock operation')
 
@@ -643,6 +660,33 @@ class NavigationManager:
         if self._navigator:
             self._navigator.destroy_node()
             self._navigator = None
+
+    def _ensure_action_server(
+        self, client, action_name: str, timeout: float = 5.0
+    ) -> None:
+        """Fail fast if a BasicNavigator action server is not advertised.
+
+        BasicNavigator's goToPose / spin / backup / driveOnHeading / etc.
+        internally call ``wait_for_server()`` with NO TIMEOUT — if the
+        target action server (e.g. /navigate_to_pose, /spin) is missing
+        because nav2 wasn't launched fully or its lifecycle never
+        activated, those calls hang indefinitely. The MCP tool then
+        appears to "time out" client-side after 90-180s with no
+        actionable error.
+
+        This helper runs ``wait_for_server(timeout_sec=timeout)`` BEFORE
+        the goal-sending call. If the server isn't up within the budget,
+        we raise a NAV2_NOT_ACTIVE error immediately so the caller sees
+        a fast, actionable failure ("nav2 not active") rather than a
+        long hang.
+        """
+        if not client.wait_for_server(timeout_sec=timeout):
+            raise NavigationError(
+                f'Action server for {action_name} not available after '
+                f'{timeout}s — is nav2 fully launched and lifecycle-active?',
+                NavigationErrorCode.NAV2_NOT_ACTIVE,
+                {'action': action_name, 'wait_timeout_sec': timeout},
+            )
 
     def _monitor_navigation_progress(
         self, context_manager: MCPContextManager, operation_name: str
