@@ -69,12 +69,15 @@ class TransformManager:
             # with the default executor that nav2 actions spin on.
             self._spin_executor = SingleThreadedExecutor()
             self._spin_executor.add_node(self._node)
+            # Capture executor as a local so the closure carries a
+            # non-Optional reference (avoids union-attr at call site).
+            executor = self._spin_executor
 
             # Background spinner — keeps /tf callbacks flowing into buffer
             def _spin_loop() -> None:
                 while not self._spin_stop.is_set() and rclpy.ok():
                     try:
-                        self._spin_executor.spin_once(timeout_sec=0.1)
+                        executor.spin_once(timeout_sec=0.1)
                     except Exception:
                         # Executor or node shutting down; exit loop
                         return
