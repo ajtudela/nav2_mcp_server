@@ -1287,3 +1287,211 @@ class TestGetPathWithoutContextManager:
         assert call_args is not None
         # Third argument (index 2) should be planner_id
         assert call_args[0][2] == 'NavFn'
+
+
+class TestDriveOnHeading:
+    """Tests for drive_on_heading primitive."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_drive_on_heading_success(self, mock_navigator_class: Mock) -> None:
+        """Test successful forward drive on heading.
+
+        Verifies that the BasicNavigator.driveOnHeading action is
+        invoked with the requested distance and speed and that the
+        success result is returned.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        result = nav_manager.drive_on_heading(0.5, 0.2, context_manager)
+
+        assert 'success' in result.lower()
+        mock_navigator.driveOnHeading.assert_called_once()
+        # First two positional args are distance and speed.
+        call_args = mock_navigator.driveOnHeading.call_args
+        assert call_args[0][0] == 0.5
+        assert call_args[0][1] == 0.2
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_drive_on_heading_failure(self, mock_navigator_class: Mock) -> None:
+        """Test drive_on_heading propagates BasicNavigator failure.
+
+        Verifies that a FAILED task result is converted into a
+        NavigationError rather than silently returning success.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.FAILED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with pytest.raises(NavigationError):
+            nav_manager.drive_on_heading(0.5, 0.2, context_manager)
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_drive_on_heading_validates_speed(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that out-of-range speed is rejected before motion.
+
+        Verifies that drive_on_heading rejects a zero (or otherwise
+        invalid) speed via validate_numeric_range, so the action
+        server is never contacted with bogus parameters.
+        """
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        with pytest.raises(ValueError):
+            nav_manager.drive_on_heading(0.5, 0.0, context_manager)
+        mock_navigator.driveOnHeading.assert_not_called()
+
+
+class TestApproachTarget:
+    """Tests for approach_target spin-and-drive primitive."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_approach_target_skips_when_already_within_standoff(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that approach_target returns immediately when close.
+
+        A target at 0.50 m with a 0.85 m standoff is already within
+        ``standoff + 0.10`` so the robot must not drive backwards.
+        No spin or drive action should be issued.
+        """
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        result = nav_manager.approach_target(
+            target_x_base=0.50,
+            target_y_base=0.0,
+            standoff_m=0.85,
+            speed=0.2,
+            context_manager=context_manager,
+        )
+
+        assert 'no approach needed' in result.lower()
+        mock_navigator.spin.assert_not_called()
+        mock_navigator.driveOnHeading.assert_not_called()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_approach_target_drives_without_spin_when_aligned(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that approach_target skips the spin when bearing is small.
+
+        A target at (1.85, 0.0) with a 0.85 m standoff requires a
+        ~1.0 m forward drive but no spin (bearing is zero). The spin
+        action must not be invoked.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        result = nav_manager.approach_target(
+            target_x_base=1.85,
+            target_y_base=0.0,
+            standoff_m=0.85,
+            speed=0.2,
+            context_manager=context_manager,
+        )
+
+        assert 'approached target' in result.lower()
+        mock_navigator.spin.assert_not_called()
+        mock_navigator.driveOnHeading.assert_called_once()
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_approach_target_spins_then_drives_when_off_axis(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that approach_target spins to face target before driving.
+
+        A target offset sideways yields a bearing well above the
+        8-degree threshold, so the robot must spin first and then
+        drive. Verifies the call order and that both actions ran.
+        """
+        mock_navigator = Mock()
+        mock_navigator.getResult.return_value = TaskResult.SUCCEEDED
+        mock_navigator_class.return_value = mock_navigator
+
+        nav_manager = NavigationManager()
+        context_manager = MCPContextManager()
+
+        result = nav_manager.approach_target(
+            target_x_base=1.5,
+            target_y_base=1.5,
+            standoff_m=0.85,
+            speed=0.2,
+            context_manager=context_manager,
+        )
+
+        assert 'approached target' in result.lower()
+        mock_navigator.spin.assert_called_once()
+        mock_navigator.driveOnHeading.assert_called_once()
+
+
+class TestEnsureActionServer:
+    """Tests for the _ensure_action_server fail-fast pre-flight check."""
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_ensure_action_server_passes_when_available(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that _ensure_action_server returns silently when ready.
+
+        The helper must not raise when the action client reports the
+        server as available within the timeout.
+        """
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        client = Mock()
+        client.wait_for_server.return_value = True
+
+        nav_manager = NavigationManager()
+        nav_manager._ensure_action_server(client, '/some_action', timeout=1.0)
+
+        client.wait_for_server.assert_called_once_with(timeout_sec=1.0)
+
+    @patch('nav2_mcp_server.navigation.BasicNavigator')
+    def test_ensure_action_server_raises_when_unavailable(
+        self, mock_navigator_class: Mock
+    ) -> None:
+        """Test that _ensure_action_server fails fast when not ready.
+
+        When wait_for_server returns False (server not advertised
+        within the budget), the helper must raise a NavigationError
+        with NAV2_NOT_ACTIVE so the caller surfaces an actionable
+        failure instead of hanging.
+        """
+        from nav2_mcp_server.exceptions import NavigationErrorCode
+        mock_navigator = Mock()
+        mock_navigator_class.return_value = mock_navigator
+
+        client = Mock()
+        client.wait_for_server.return_value = False
+
+        nav_manager = NavigationManager()
+        with pytest.raises(NavigationError) as exc_info:
+            nav_manager._ensure_action_server(
+                client, '/missing_action', timeout=0.5
+            )
+
+        assert exc_info.value.error_code == (
+            NavigationErrorCode.NAV2_NOT_ACTIVE
+        )
+        client.wait_for_server.assert_called_once_with(timeout_sec=0.5)

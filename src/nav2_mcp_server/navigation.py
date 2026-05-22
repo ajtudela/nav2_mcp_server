@@ -20,7 +20,7 @@ operations including pose navigation, waypoint following, and robot control.
 
 import json
 import math
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -182,6 +182,9 @@ class NavigationManager:
             f'Navigating to pose: x={x:.2f}, y={y:.2f}, yaw={yaw:.2f}'
         )
 
+        self._ensure_action_server(
+            self.navigator.nav_to_pose_client, '/navigate_to_pose'
+        )
         self.navigator.goToPose(goal_pose)
         self._monitor_navigation_progress(context_manager, 'pose navigation')
 
@@ -222,6 +225,9 @@ class NavigationManager:
             f'Starting waypoint following with {len(poses)} points'
         )
 
+        self._ensure_action_server(
+            self.navigator.follow_waypoints_client, '/follow_waypoints'
+        )
         self.navigator.followWaypoints(poses)
         self._monitor_waypoint_progress(context_manager)
 
@@ -260,6 +266,7 @@ class NavigationManager:
         context_manager.info_sync(
             f'Starting spin operation: {angle:.2f} radians')
 
+        self._ensure_action_server(self.navigator.spin_client, '/spin')
         self.navigator.spin(angle)
         self._monitor_navigation_progress(context_manager, 'spin operation')
 
@@ -316,6 +323,7 @@ class NavigationManager:
             f'Starting backup: {distance:.2f}m at {speed:.2f}m/s'
         )
 
+        self._ensure_action_server(self.navigator.backup_client, '/backup')
         self.navigator.backup(distance, speed)
         self._monitor_navigation_progress(context_manager, 'backup operation')
 
@@ -325,6 +333,143 @@ class NavigationManager:
         else:
             raise create_navigation_error_from_result(
                 result, 'Backup operation')
+
+    def drive_on_heading(
+        self, distance: float, speed: float, context_manager: MCPContextManager
+    ) -> str:
+        """Drive robot forward by specified distance on its current heading.
+
+        Parameters
+        ----------
+        distance : float
+            Distance to drive forward in meters (positive value).
+        speed : float
+            Forward speed in m/s.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Success message with distance.
+
+        Raises
+        ------
+        NavigationError
+            If drive operation fails.
+        ValueError
+            If distance or speed parameters are invalid.
+        """
+        # Reuse backup limits (physical motion limits, direction-agnostic)
+        validate_numeric_range(
+            distance,
+            self.config.navigation.min_backup_distance,
+            self.config.navigation.max_backup_distance,
+            'distance'
+        )
+        validate_numeric_range(
+            speed,
+            self.config.navigation.min_backup_speed,
+            self.config.navigation.max_backup_speed,
+            'speed'
+        )
+
+        time_allowance = int(distance / speed + 5)
+
+        self.navigator.get_logger().info(
+            f'Driving robot on heading: {distance:.2f}m at {speed:.2f}m/s'
+        )
+        context_manager.info_sync(
+            f'Starting drive on heading: {distance:.2f}m at {speed:.2f}m/s'
+        )
+
+        self._ensure_action_server(
+            self.navigator.drive_on_heading_client, '/drive_on_heading'
+        )
+        self.navigator.driveOnHeading(distance, speed, time_allowance)
+        self._monitor_navigation_progress(
+            context_manager, 'drive on heading operation'
+        )
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            return f'Successfully drove {distance:.2f} meters on heading'
+        else:
+            raise create_navigation_error_from_result(
+                result, 'Drive on heading operation')
+
+    def approach_target(
+        self,
+        target_x_base: float,
+        target_y_base: float,
+        standoff_m: float,
+        speed: float,
+        context_manager: MCPContextManager,
+    ) -> str:
+        """Drive the robot to ``standoff_m`` from a target given in base_footprint.
+
+        Given a target's xy in base_footprint frame, spin to face the target
+        if the bearing is significant, then drive forward by
+        ``dist - standoff_m`` along the now-aligned heading using
+        ``drive_on_heading``. Returns immediately if the target is already
+        within ``standoff_m + 0.10m``.
+
+        The caller is responsible for any post-approach perception check.
+        This method does not re-verify the target position after driving.
+
+        Parameters
+        ----------
+        target_x_base : float
+            Target x in the robot's base_footprint frame (forward = +x).
+        target_y_base : float
+            Target y in the robot's base_footprint frame (left = +y).
+        standoff_m : float
+            Desired distance from the target after the approach.
+        speed : float
+            Forward drive speed in m/s.
+        context_manager : MCPContextManager
+            Context manager for logging.
+
+        Returns
+        -------
+        str
+            Summary of what was executed.
+        """
+        target_dist = math.hypot(target_x_base, target_y_base)
+        bearing = math.atan2(target_y_base, target_x_base)
+
+        self.navigator.get_logger().info(
+            f'approach_target: base=({target_x_base:.2f},{target_y_base:.2f}) '
+            f'dist={target_dist:.2f}m bearing={math.degrees(bearing):.1f}deg '
+            f'standoff={standoff_m:.2f}m'
+        )
+        context_manager.info_sync(
+            f'approach_target: dist={target_dist:.2f}m -> standoff={standoff_m:.2f}m'
+        )
+
+        # Already within standoff (with 10cm tolerance). Don't drive — that
+        # would back away from a target the manipulator can already reach.
+        if target_dist <= standoff_m + 0.10:
+            return (
+                f'Already at {target_dist:.2f}m (<= standoff '
+                f'{standoff_m:.2f}m + 0.10m); no approach needed'
+            )
+
+        # Spin to face the target if the bearing is significant. ~8 deg
+        # threshold avoids burning a spin call on near-aligned targets.
+        if abs(bearing) > math.radians(8):
+            self.spin_robot(bearing, context_manager)
+
+        # Drive forward by (dist - standoff) along the now-aligned heading.
+        # Range validation, action-server check, and result handling all
+        # live in drive_on_heading.
+        drive_dist = max(target_dist - standoff_m, 0.20)
+        self.drive_on_heading(drive_dist, speed, context_manager)
+
+        return (
+            f'Approached target: spun {math.degrees(bearing):.1f}deg, '
+            f'drove {drive_dist:.2f}m -> ~{standoff_m:.2f}m standoff'
+        )
 
     def clear_costmaps(
         self, costmap_type: str, context_manager: MCPContextManager
@@ -575,6 +720,9 @@ class NavigationManager:
                     f' {dock_pose.pose.position.y:.2f})'
                 )
 
+            self._ensure_action_server(
+                self.navigator.docking_client, '/dock_robot'
+            )
             self.navigator.dockRobotByPose(dock_pose, dock_type, nav_to_dock)
             dock_description = (
                 f'pose ({dock_pose.pose.position.x:.2f},\n'
@@ -588,6 +736,9 @@ class NavigationManager:
                 context_manager.info_sync(
                     f'Starting dock operation at dock ID: {dock_id}')
 
+            self._ensure_action_server(
+                self.navigator.docking_client, '/dock_robot'
+            )
             self.navigator.dockRobotByID(dock_id, nav_to_dock)
             dock_description = f'dock ID: {dock_id}'
 
@@ -627,6 +778,9 @@ class NavigationManager:
         if context_manager:
             context_manager.info_sync('Starting undock operation')
 
+        self._ensure_action_server(
+            self.navigator.undocking_client, '/undock_robot'
+        )
         self.navigator.undockRobot(dock_type)
         self._monitor_navigation_progress(context_manager, 'undock operation')
 
@@ -643,6 +797,33 @@ class NavigationManager:
         if self._navigator:
             self._navigator.destroy_node()
             self._navigator = None
+
+    def _ensure_action_server(
+        self, client: Any, action_name: str, timeout: float = 5.0
+    ) -> None:
+        """Fail fast if a BasicNavigator action server is not advertised.
+
+        BasicNavigator's goToPose / spin / backup / driveOnHeading / etc.
+        internally call ``wait_for_server()`` with NO TIMEOUT — if the
+        target action server (e.g. /navigate_to_pose, /spin) is missing
+        because nav2 wasn't launched fully or its lifecycle never
+        activated, those calls hang indefinitely. The MCP tool then
+        appears to "time out" client-side after 90-180s with no
+        actionable error.
+
+        This helper runs ``wait_for_server(timeout_sec=timeout)`` BEFORE
+        the goal-sending call. If the server isn't up within the budget,
+        we raise a NAV2_NOT_ACTIVE error immediately so the caller sees
+        a fast, actionable failure ("nav2 not active") rather than a
+        long hang.
+        """
+        if not client.wait_for_server(timeout_sec=timeout):
+            raise NavigationError(
+                f'Action server for {action_name} not available after '
+                f'{timeout}s — is nav2 fully launched and lifecycle-active?',
+                NavigationErrorCode.NAV2_NOT_ACTIVE,
+                {'action': action_name, 'wait_timeout_sec': timeout},
+            )
 
     def _monitor_navigation_progress(
         self, context_manager: MCPContextManager, operation_name: str
