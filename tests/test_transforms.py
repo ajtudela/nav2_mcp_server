@@ -26,6 +26,7 @@ class TestTransformManagerInitialization:
         assert tf_manager is not None
         assert tf_manager._node is None  # Node not created until needed
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -37,11 +38,13 @@ class TestTransformManagerInitialization:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test TransformManager TF setup.
 
-        Verifies that TF2 buffer and listener are properly configured.
+        Verifies that TF2 buffer, listener, and dedicated spinner
+        executor are properly configured.
         """
         mock_node = Mock()
         mock_node_class.return_value = mock_node
@@ -57,11 +60,90 @@ class TestTransformManagerInitialization:
         mock_node_class.assert_called_once()
         mock_buffer_class.assert_called_once()
         mock_listener_class.assert_called_once()
+        # Dedicated executor for the TF node is created and the node
+        # is added to it (precondition for the background spinner).
+        mock_executor_class.assert_called_once()
+        mock_executor_class.return_value.add_node.assert_called_once_with(
+            mock_node
+        )
+
+    @patch('nav2_mcp_server.transforms.threading.Thread')
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
+    @patch('nav2_mcp_server.transforms.TransformListener')
+    @patch('nav2_mcp_server.transforms.Buffer')
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_ensure_tf_setup_starts_daemon_spinner_thread(
+        self,
+        mock_node_class: Mock,
+        mock_buffer_class: Mock,
+        mock_listener_class: Mock,
+        mock_executor_class: Mock,
+        mock_thread_class: Mock
+    ) -> None:
+        """Test that _ensure_tf_setup starts a daemon spinner thread.
+
+        Verifies that the background TF spinner thread is created
+        with daemon=True (so it does not block process shutdown)
+        and is started exactly once.
+        """
+        mock_node_class.return_value = Mock()
+        mock_buffer_class.return_value = Mock()
+        mock_thread_instance = Mock()
+        mock_thread_class.return_value = mock_thread_instance
+
+        tf_manager = TransformManager()
+        tf_manager._ensure_tf_setup()
+
+        # Thread constructed exactly once with daemon=True.
+        mock_thread_class.assert_called_once()
+        kwargs = mock_thread_class.call_args.kwargs
+        assert kwargs.get('daemon') is True
+        # Spinner is named so it can be identified in stack traces.
+        assert kwargs.get('name') == 'tf_spinner'
+        # And the thread was actually started.
+        mock_thread_instance.start.assert_called_once()
+
+    @patch('nav2_mcp_server.transforms.threading.Thread')
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
+    @patch('nav2_mcp_server.transforms.TransformListener')
+    @patch('nav2_mcp_server.transforms.Buffer')
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_ensure_tf_setup_is_idempotent(
+        self,
+        mock_node_class: Mock,
+        mock_buffer_class: Mock,
+        mock_listener_class: Mock,
+        mock_executor_class: Mock,
+        mock_thread_class: Mock
+    ) -> None:
+        """Test that _ensure_tf_setup is safe to call repeatedly.
+
+        Verifies that resources are created on the first call only.
+        Subsequent calls must not spawn additional nodes, executors,
+        or spinner threads (which would otherwise duplicate TF
+        callback processing).
+        """
+        mock_node_class.return_value = Mock()
+        mock_buffer_class.return_value = Mock()
+        mock_thread_class.return_value = Mock()
+
+        tf_manager = TransformManager()
+        tf_manager._ensure_tf_setup()
+        tf_manager._ensure_tf_setup()
+        tf_manager._ensure_tf_setup()
+
+        # Resources created exactly once across multiple calls.
+        mock_node_class.assert_called_once()
+        mock_buffer_class.assert_called_once()
+        mock_listener_class.assert_called_once()
+        mock_executor_class.assert_called_once()
+        mock_thread_class.assert_called_once()
 
 
 class TestGetRobotPose:
     """Tests for robot pose retrieval functionality."""
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -71,7 +153,8 @@ class TestGetRobotPose:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test successful robot pose retrieval.
 
@@ -108,6 +191,7 @@ class TestGetRobotPose:
         assert result['position']['x'] == 1.0
         assert result['position']['y'] == 2.0
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -117,7 +201,8 @@ class TestGetRobotPose:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test robot pose retrieval with transform failure.
 
@@ -144,6 +229,7 @@ class TestGetRobotPose:
         with pytest.raises(TransformError):
             tf_manager.get_robot_pose(context_manager)
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -153,7 +239,8 @@ class TestGetRobotPose:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test robot pose retrieval works with config frames.
 
@@ -189,6 +276,67 @@ class TestGetRobotPose:
         assert result['position']['x'] == 3.0
         assert result['position']['y'] == 4.0
         assert result['position']['z'] == 0.5
+
+    @patch('nav2_mcp_server.transforms.time.sleep')
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
+    @patch('nav2_mcp_server.transforms.TransformListener')
+    @patch('nav2_mcp_server.transforms.Buffer')
+    @patch('nav2_mcp_server.transforms.Node')
+    def test_get_robot_pose_waits_for_transform_availability(
+        self,
+        mock_node_class: Mock,
+        mock_buffer_class: Mock,
+        mock_listener_class: Mock,
+        mock_executor_class: Mock,
+        mock_sleep: Mock
+    ) -> None:
+        """Test that get_robot_pose polls until the transform is ready.
+
+        The background spinner keeps the buffer current; the public
+        method must poll can_transform and only call lookup_transform
+        once the chain is available. Verifies the poll-then-lookup
+        pattern by returning False for the first few polls and True
+        thereafter.
+        """
+        mock_node_class.return_value = Mock()
+        mock_buffer_instance = Mock()
+        mock_buffer_class.return_value = mock_buffer_instance
+
+        # Build a valid transform that will be returned on lookup.
+        mock_transform = Mock()
+        mock_transform.transform.translation.x = 1.0
+        mock_transform.transform.translation.y = 2.0
+        mock_transform.transform.translation.z = 0.0
+        mock_transform.transform.rotation.x = 0.0
+        mock_transform.transform.rotation.y = 0.0
+        mock_transform.transform.rotation.z = 0.0
+        mock_transform.transform.rotation.w = 1.0
+        mock_transform.header.stamp.sec = 0
+        mock_transform.header.stamp.nanosec = 0
+
+        # Transform unavailable on first three polls, available on
+        # the fourth. The method should sleep between polls and then
+        # call lookup_transform exactly once.
+        mock_buffer_instance.can_transform.side_effect = [
+            False, False, False, True
+        ]
+        mock_buffer_instance.lookup_transform.return_value = mock_transform
+
+        tf_manager = TransformManager()
+        context_manager = MCPContextManager()
+
+        result = tf_manager.get_robot_pose(context_manager)
+
+        # Polled four times in total (three misses, one hit).
+        assert mock_buffer_instance.can_transform.call_count == 4
+        # Lookup happened exactly once, after the transform became
+        # available — not on every iteration of the poll loop.
+        mock_buffer_instance.lookup_transform.assert_called_once()
+        # Slept between failed polls (at least three times).
+        assert mock_sleep.call_count >= 3
+        # Result reflects the transform that became available.
+        assert result['position']['x'] == 1.0
+        assert result['position']['y'] == 2.0
 
 
 class TestPoseExtraction:
@@ -388,6 +536,7 @@ class TestTransformManagerGlobal:
 class TestTransformManagerErrorHandling:
     """Tests for TransformManager error handling."""
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -397,7 +546,8 @@ class TestTransformManagerErrorHandling:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test robot pose retrieval with timeout error.
 
@@ -436,6 +586,7 @@ class TestTransformManagerErrorHandling:
         assert tf_manager is not None
         assert tf_manager._node is None  # Not initialized yet
 
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -445,7 +596,8 @@ class TestTransformManagerErrorHandling:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock
     ) -> None:
         """Test robot pose retrieval when buffer is not initialized.
 
@@ -466,6 +618,8 @@ class TestTransformManagerErrorHandling:
         with pytest.raises(TransformError, match='TF buffer not initialized'):
             tf_manager.get_robot_pose(context_manager)
 
+    @patch('nav2_mcp_server.transforms.time.sleep')
+    @patch('nav2_mcp_server.transforms.SingleThreadedExecutor')
     @patch('nav2_mcp_server.transforms.rclpy.spin_once')
     @patch('nav2_mcp_server.transforms.TransformListener')
     @patch('nav2_mcp_server.transforms.Buffer')
@@ -475,14 +629,15 @@ class TestTransformManagerErrorHandling:
         mock_node_class: Mock,
         mock_buffer_class: Mock,
         mock_listener_class: Mock,
-        mock_spin: Mock
+        mock_spin: Mock,
+        mock_executor_class: Mock,
+        mock_sleep: Mock
     ) -> None:
         """Test robot pose when transform never becomes available.
 
-        Verifies timeout handling when transform is not available.
+        Verifies that the wait-until-available polling loop exits
+        and raises TransformError when can_transform never succeeds.
         """
-        from typing import Any
-
         from nav2_mcp_server.exceptions import TransformError
 
         mock_node = Mock()
@@ -490,26 +645,17 @@ class TestTransformManagerErrorHandling:
         mock_buffer_instance = Mock()
         mock_buffer_class.return_value = mock_buffer_instance
 
-        # Mock transform never available
+        # Transform never becomes available throughout the polling
+        # window. The 0.1 s sleep between polls is mocked out so the
+        # loop completes its 50 iterations quickly.
         mock_buffer_instance.can_transform.return_value = False
 
         tf_manager = TransformManager()
         context_manager = MCPContextManager()
 
-        # Limit spin_once calls to avoid infinite loop
-        call_count = [0]
-
-        def spin_side_effect(*args: Any, **kwargs: Any) -> None:
-            call_count[0] += 1
-            if call_count[0] > 5:
-                # Force exception after a few tries
-                raise TransformError(
-                    'Could not get transform after waiting',
-                    0,
-                    {}
-                )
-
-        mock_spin.side_effect = spin_side_effect
-
-        with pytest.raises(TransformError):
+        with pytest.raises(TransformError, match='after waiting'):
             tf_manager.get_robot_pose(context_manager)
+
+        # Polling loop ran the full budget and slept between attempts.
+        assert mock_sleep.called
+        assert mock_buffer_instance.can_transform.call_count >= 10
