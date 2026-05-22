@@ -20,7 +20,7 @@ operations including pose navigation, waypoint following, and robot control.
 
 import json
 import math
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
@@ -799,7 +799,7 @@ class NavigationManager:
             self._navigator = None
 
     def _ensure_action_server(
-        self, client, action_name: str, timeout: float = 5.0
+        self, client: Any, action_name: str, timeout: float = 5.0
     ) -> None:
         """Fail fast if a BasicNavigator action server is not advertised.
 

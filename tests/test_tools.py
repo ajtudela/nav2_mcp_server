@@ -230,6 +230,132 @@ class TestBackupRobot:
             mock_navigation_manager.backup_robot.assert_called_once()
 
 
+class TestDriveOnHeading:
+    """Tests for drive_on_heading tool."""
+
+    @patch('nav2_mcp_server.tools.get_transform_manager')
+    @patch('nav2_mcp_server.tools.get_navigation_manager')
+    async def test_drive_on_heading_success(
+        self,
+        mock_get_nav_manager: Mock,
+        mock_get_tf_manager: Mock,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test successful forward drive via drive_on_heading tool."""
+        mock_get_nav_manager.return_value = mock_navigation_manager
+        async with Client(test_server) as client:
+            result = await client.call_tool(
+                'drive_on_heading',
+                {
+                    'distance': 0.5,
+                    'speed': 0.2
+                }
+            )
+
+            assert result.content
+            mock_navigation_manager.drive_on_heading.assert_called_once()
+
+    @patch('nav2_mcp_server.tools.get_config')
+    @patch('nav2_mcp_server.tools.get_transform_manager')
+    @patch('nav2_mcp_server.tools.get_navigation_manager')
+    async def test_drive_on_heading_default_speed(
+        self,
+        mock_get_nav_manager: Mock,
+        mock_get_tf_manager: Mock,
+        mock_get_config: Mock,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test drive_on_heading falls back to config speed when omitted.
+
+        Verifies that omitting the speed argument causes the tool to
+        substitute config.navigation.default_backup_speed (motion
+        limits are direction-agnostic, so backup-speed bounds apply).
+        """
+        mock_get_nav_manager.return_value = mock_navigation_manager
+        config_obj = Mock()
+        config_obj.navigation.default_backup_speed = 0.25
+        mock_get_config.return_value = config_obj
+
+        async with Client(test_server) as client:
+            result = await client.call_tool(
+                'drive_on_heading',
+                {
+                    'distance': 0.5
+                    # speed omitted, should use default
+                }
+            )
+
+            assert result.content
+            mock_navigation_manager.drive_on_heading.assert_called_once()
+
+
+class TestApproachTarget:
+    """Tests for approach_target tool."""
+
+    @patch('nav2_mcp_server.tools.get_transform_manager')
+    @patch('nav2_mcp_server.tools.get_navigation_manager')
+    async def test_approach_target_success(
+        self,
+        mock_get_nav_manager: Mock,
+        mock_get_tf_manager: Mock,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test successful approach via approach_target tool."""
+        mock_get_nav_manager.return_value = mock_navigation_manager
+        async with Client(test_server) as client:
+            result = await client.call_tool(
+                'approach_target',
+                {
+                    'target_x_base': 1.5,
+                    'target_y_base': 0.0,
+                    'standoff_m': 0.85,
+                    'speed': 0.2
+                }
+            )
+
+            assert result.content
+            mock_navigation_manager.approach_target.assert_called_once()
+
+    @patch('nav2_mcp_server.tools.get_config')
+    @patch('nav2_mcp_server.tools.get_transform_manager')
+    @patch('nav2_mcp_server.tools.get_navigation_manager')
+    async def test_approach_target_default_speed(
+        self,
+        mock_get_nav_manager: Mock,
+        mock_get_tf_manager: Mock,
+        mock_get_config: Mock,
+        test_server: FastMCP,
+        mock_navigation_manager: Mock
+    ) -> None:
+        """Test approach_target falls back to config speed when omitted.
+
+        Verifies that omitting the speed argument causes the tool to
+        substitute config.navigation.default_backup_speed for the
+        forward-drive leg of the approach.
+        """
+        mock_get_nav_manager.return_value = mock_navigation_manager
+        config_obj = Mock()
+        config_obj.navigation.default_backup_speed = 0.25
+        mock_get_config.return_value = config_obj
+
+        async with Client(test_server) as client:
+            result = await client.call_tool(
+                'approach_target',
+                {
+                    'target_x_base': 1.5,
+                    'target_y_base': 0.0,
+                    'standoff_m': 0.85
+                    # speed omitted, should use default
+                }
+            )
+
+            assert result.content
+            mock_navigation_manager.approach_target.assert_called_once()
+
+
 class TestDockRobot:
     """Tests for dock_robot tool."""
 

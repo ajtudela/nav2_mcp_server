@@ -86,6 +86,12 @@ def mock_navigation_manager() -> Mock:
     mock_nav_manager.backup_robot.return_value = (
         'Backup operation started successfully'
     )
+    mock_nav_manager.drive_on_heading.return_value = (
+        'Drive on heading operation started successfully'
+    )
+    mock_nav_manager.approach_target.return_value = (
+        'Approach target operation completed successfully'
+    )
     mock_nav_manager.dock_robot.return_value = (
         'Docking operation started successfully'
     )
